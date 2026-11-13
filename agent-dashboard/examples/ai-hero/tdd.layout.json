@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "name": "AI Hero example · TDD workspace",
+  "root": {
+    "kind": "column",
+    "children": [
+      {
+        "id": "session",
+        "kind": "session",
+        "title": "Current Claude session",
+        "size": 7,
+        "color": "peach"
+      },
+      {
+        "kind": "row",
+        "stack_below": 104,
+        "children": [
+          {
+            "id": "graph",
+            "kind": "dag",
+            "title": "Declared topology · TDD",
+            "weight": 3,
+            "dag": {
+              "version": 1,
+              "name": "AI Hero example · caller-declared red-green loop",
+              "nodes": [
+                {
+                  "id": "lead",
+                  "label": "Lead session",
+                  "color": "peach",
+                  "bind": {
+                    "actor": "lead"
+                  }
+                },
+                {
+                  "id": "red",
+                  "label": "Red · reported step",
+                  "color": "red",
+                  "bind": {
+                    "task": "replace-with-reported-red-task-id"
+                  },
+                  "meta": [
+                    "Not inferred from test tools"
+                  ]
+                },
+                {
+                  "id": "green",
+                  "label": "Green · reported step",
+                  "color": "green",
+                  "bind": {
+                    "task": "replace-with-reported-green-task-id"
+                  },
+                  "meta": [
+                    "Not proof that tests passed"
+                  ]
+                }
+              ],
+              "edges": [
+                {
+                  "from": "lead",
+                  "to": "red",
+                  "label": "agreed seam"
+                },
+                {
+                  "from": "red",
+                  "to": "green",
+                  "label": "caller-declared transition"
+                },
+                {
+                  "from": "green",
+                  "to": "red",
+                  "label": "next agreed slice",
+                  "style": "return"
+                }
+              ]
+            }
+          },
+          {
+            "kind": "column",
+            "weight": 2,
+            "children": [
+              {
+                "id": "lead",
+                "kind": "agent",
+                "title": "Lead",
+                "actor": "lead",
+                "size": 7,
+                "color": "peach"
+              },
+              {
+                "id": "workers",
+                "kind": "agents",
+                "title": "Observed workers · no inferred roles",
+                "weight": 1,
+                "color": "mint"
+              },
+              {
+                "id": "work-items",
+                "kind": "tasks",
+                "title": "Existing reported tasks",
+                "weight": 2,
+                "color": "blue"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "events",
+        "kind": "events",
+        "title": "Observed activity · not phase inference",
+        "size": 6,
+        "color": "gray"
+      },
+      {
+        "id": "caller-context",
+        "kind": "text",
+        "title": "Caller context · not telemetry",
+        "size": 5,
+        "color": "purple",
+        "text": [
+          "Caller chooses the agreed test seam; red/green nodes bind reported task IDs.",
+          "No stage or test result is inferred from tools. Missing IDs stay unknown.",
+          "Local /tdd keeps refactoring in review, outside this loop."
+        ]
+      }
+    ]
+  }
+}

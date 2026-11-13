@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "name": "issue loop · autonomous long-running workspace",
+  "root": {
+    "kind": "row",
+    "stack_below": 76,
+    "children": [
+      {
+        "kind": "column",
+        "size": 40,
+        "children": [
+          { "id": "ses", "kind": "session", "title": "loop session (telemetry)", "size": 7, "color": "mint" },
+          { "id": "lead", "kind": "agent", "title": "intake · lead (telemetry)", "actor": "lead", "weight": 1, "color": "purple" },
+          { "id": "wrk", "kind": "agents", "title": "triage/grill/pr workers (telemetry)", "weight": 1, "color": "peach" }
+        ]
+      },
+      {
+        "kind": "column",
+        "weight": 3,
+        "children": [
+          { "id": "tsk", "kind": "tasks", "title": "issue tasks (reported plan)", "weight": 2, "color": "blue" },
+          { "id": "evt", "kind": "events", "title": "event stream (telemetry)", "weight": 3, "color": "gray" },
+          {
+            "id": "txt",
+            "kind": "text",
+            "title": "loop guide · authored text (not telemetry)",
+            "weight": 2,
+            "color": "red",
+            "text": [
+              "▶ Loop: issue intake → triage → grill → pr",
+              "  After pr, return to intake for the next issue",
+              "Compose the native DAG panel with other panels:",
+              "  DAG shows stage flow; panels show live buffers",
+              "▶ Bind stage state to real task/actor IDs;",
+              "  Unbound nodes show declared · unobserved"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

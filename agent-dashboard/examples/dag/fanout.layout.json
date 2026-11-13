@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "name": "Synthetic DAG composition",
+  "root": {
+    "kind": "column",
+    "children": [
+      {
+        "kind": "row",
+        "stack_below": 76,
+        "children": [
+          {
+            "id": "graph",
+            "kind": "dag",
+            "title": "Declared topology",
+            "weight": 3,
+            "dag": {
+              "version": 1,
+              "name": "Synthetic fan-out and merge",
+              "nodes": [
+                {
+                  "id": "lead",
+                  "label": "Session",
+                  "color": "peach",
+                  "bind": {
+                    "actor": "lead"
+                  }
+                },
+                {
+                  "id": "a",
+                  "label": "Reported item A",
+                  "color": "blue",
+                  "bind": {
+                    "task": "1"
+                  }
+                },
+                {
+                  "id": "b",
+                  "label": "Reported item B",
+                  "color": "teal",
+                  "bind": {
+                    "task": "2"
+                  }
+                },
+                {
+                  "id": "merge",
+                  "label": "Reported item C",
+                  "color": "purple",
+                  "bind": {
+                    "task": "3"
+                  }
+                }
+              ],
+              "edges": [
+                {
+                  "from": "lead",
+                  "to": "a",
+                  "label": "branch A"
+                },
+                {
+                  "from": "lead",
+                  "to": "b",
+                  "label": "branch B",
+                  "style": "dashed"
+                },
+                {
+                  "from": "a",
+                  "to": "merge"
+                },
+                {
+                  "from": "b",
+                  "to": "merge"
+                },
+                {
+                  "from": "lead",
+                  "to": "merge",
+                  "label": "cross-rank declaration"
+                },
+                {
+                  "from": "merge",
+                  "to": "lead",
+                  "style": "return",
+                  "label": "caller-declared loop"
+                }
+              ]
+            }
+          },
+          {
+            "id": "tasks",
+            "kind": "tasks",
+            "title": "Reported tasks",
+            "weight": 1,
+            "color": "mint"
+          }
+        ]
+      },
+      {
+        "id": "events",
+        "kind": "events",
+        "title": "Events",
+        "size": 6
+      }
+    ]
+  }
+}
