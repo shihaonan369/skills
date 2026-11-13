@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "name": "DEMO · AI Hero example · Review without Spec workspace",
+  "root": {
+    "kind": "column",
+    "children": [
+      {
+        "id": "session",
+        "kind": "session",
+        "title": "Current Claude session",
+        "size": 7,
+        "color": "peach"
+      },
+      {
+        "kind": "row",
+        "stack_below": 104,
+        "children": [
+          {
+            "id": "graph",
+            "kind": "dag",
+            "title": "Declared topology · Review without Spec",
+            "weight": 3,
+            "dag": {
+              "version": 1,
+              "name": "AI Hero example · Standards only (no spec available)",
+              "nodes": [
+                {
+                  "id": "lead",
+                  "label": "Lead session",
+                  "color": "peach",
+                  "bind": {
+                    "actor": "lead"
+                  }
+                },
+                {
+                  "id": "standards",
+                  "label": "Standards axis",
+                  "color": "blue",
+                  "bind": {
+                    "actor": "demo-scout"
+                  },
+                  "meta": [
+                    "Repo standards + heuristics"
+                  ]
+                },
+                {
+                  "id": "verdict",
+                  "label": "Caller verdict",
+                  "color": "purple",
+                  "meta": [
+                    "Caller annotation only"
+                  ]
+                }
+              ],
+              "edges": [
+                {
+                  "from": "lead",
+                  "to": "standards",
+                  "label": "delegate · pinned diff"
+                },
+                {
+                  "from": "standards",
+                  "to": "verdict",
+                  "label": "findings"
+                },
+                {
+                  "from": "verdict",
+                  "to": "lead",
+                  "label": "caller decides next action",
+                  "style": "return"
+                },
+                {
+                  "from": "standards",
+                  "to": "lead",
+                  "label": "report results",
+                  "style": "return"
+                }
+              ]
+            }
+          },
+          {
+            "kind": "column",
+            "weight": 2,
+            "children": [
+              {
+                "id": "standards",
+                "kind": "agent",
+                "title": "Standards axis · Spec skipped",
+                "actor": "demo-scout",
+                "color": "blue",
+                "weight": 2
+              },
+              {
+                "id": "review-items",
+                "kind": "tasks",
+                "title": "Reported review items",
+                "weight": 1,
+                "color": "purple"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "events",
+        "kind": "events",
+        "title": "Axis activity · exact actor filter",
+        "size": 6,
+        "color": "gray",
+        "actors": [
+          "lead",
+          "demo-scout"
+        ]
+      },
+      {
+        "id": "caller-context",
+        "kind": "text",
+        "title": "Caller context · not telemetry",
+        "size": 5,
+        "color": "purple",
+        "text": [
+          "SYNTHETIC preview only; sample roles and task states are not real execution.",
+          "Bindings point to the isolated DEMO fixture; use the live template for work.",
+          "Declared edges and caller verdicts are not measured traffic or test results."
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "name": "issue loop · autonomous long-running workspace",
+  "root": {
+    "kind": "row",
+    "stack_below": 76,
+    "children": [
+      {
+        "kind": "column",
+        "size": 40,
+        "children": [
+          { "id": "ses", "kind": "session", "title": "loop 会话 · Session (遥测)", "size": 7, "color": "mint" },
+          { "id": "lead", "kind": "agent", "title": "intake · lead (遥测)", "actor": "lead", "weight": 1, "color": "purple" },
+          { "id": "wrk", "kind": "agents", "title": "triage/grill/pr workers (遥测)", "weight": 1, "color": "peach" }
+        ]
+      },
+      {
+        "kind": "column",
+        "weight": 3,
+        "children": [
+          { "id": "tsk", "kind": "tasks", "title": "issue 任务 · Tasks (上报计划)", "weight": 2, "color": "blue" },
+          { "id": "evt", "kind": "events", "title": "事件流 · Events (遥测)", "weight": 3, "color": "gray" },
+          {
+            "id": "txt",
+            "kind": "text",
+            "title": "回路说明 · 作者文本 (非遥测)",
+            "weight": 2,
+            "color": "red",
+            "text": [
+              "▶ 回路: issue intake → triage → grill → pr",
+              "  pr 完成后回到 intake 处理下一issue",
+              "原生 DAG Panel 可与其他面板组合:",
+              "  DAG 显示阶段流, 面板显示实时缓冲",
+              "▶ 阶段状态绑定真实 task/actor id;",
+              "  未绑定节点显示 declared · unobserved"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

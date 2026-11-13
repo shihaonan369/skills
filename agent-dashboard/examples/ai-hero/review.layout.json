@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "name": "AI Hero example · Review workspace",
+  "root": {
+    "kind": "column",
+    "children": [
+      {
+        "id": "session",
+        "kind": "session",
+        "title": "Current Claude session",
+        "size": 7,
+        "color": "peach"
+      },
+      {
+        "kind": "row",
+        "stack_below": 104,
+        "children": [
+          {
+            "id": "graph",
+            "kind": "dag",
+            "title": "Declared topology · Review",
+            "weight": 3,
+            "dag": {
+              "version": 1,
+              "name": "AI Hero example · caller-declared review axes",
+              "nodes": [
+                {
+                  "id": "lead",
+                  "label": "Lead session",
+                  "color": "peach",
+                  "bind": {
+                    "actor": "lead"
+                  }
+                },
+                {
+                  "id": "standards",
+                  "label": "Standards axis",
+                  "color": "blue",
+                  "bind": {
+                    "actor": "replace-with-observed-standards-id"
+                  },
+                  "meta": [
+                    "Repo standards + heuristics"
+                  ]
+                },
+                {
+                  "id": "spec",
+                  "label": "Spec axis",
+                  "color": "teal",
+                  "bind": {
+                    "actor": "replace-with-observed-spec-id"
+                  },
+                  "meta": [
+                    "Originating issue/spec"
+                  ]
+                },
+                {
+                  "id": "verdict",
+                  "label": "Caller verdict",
+                  "color": "purple",
+                  "meta": [
+                    "Caller annotation only"
+                  ]
+                }
+              ],
+              "edges": [
+                {
+                  "from": "lead",
+                  "to": "standards",
+                  "label": "delegate · pinned diff"
+                },
+                {
+                  "from": "lead",
+                  "to": "spec",
+                  "label": "delegate · diff + spec"
+                },
+                {
+                  "from": "standards",
+                  "to": "verdict",
+                  "label": "findings"
+                },
+                {
+                  "from": "spec",
+                  "to": "verdict",
+                  "label": "findings"
+                },
+                {
+                  "from": "verdict",
+                  "to": "lead",
+                  "label": "caller decides next action",
+                  "style": "return"
+                },
+                {
+                  "from": "standards",
+                  "to": "lead",
+                  "label": "report results",
+                  "style": "return"
+                },
+                {
+                  "from": "spec",
+                  "to": "lead",
+                  "label": "report results",
+                  "style": "return"
+                }
+              ]
+            }
+          },
+          {
+            "kind": "column",
+            "weight": 2,
+            "children": [
+              {
+                "kind": "row",
+                "weight": 2,
+                "stack_below": 56,
+                "children": [
+                  {
+                    "id": "standards",
+                    "kind": "agent",
+                    "title": "Standards axis",
+                    "actor": "replace-with-observed-standards-id",
+                    "color": "blue"
+                  },
+                  {
+                    "id": "spec",
+                    "kind": "agent",
+                    "title": "Spec axis",
+                    "actor": "replace-with-observed-spec-id",
+                    "color": "teal"
+                  }
+                ]
+              },
+              {
+                "id": "review-items",
+                "kind": "tasks",
+                "title": "Reported review items",
+                "weight": 1,
+                "color": "purple"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "events",
+        "kind": "events",
+        "title": "Axis activity · exact actor filter",
+        "size": 6,
+        "color": "gray",
+        "actors": [
+          "lead",
+          "replace-with-observed-standards-id",
+          "replace-with-observed-spec-id"
+        ]
+      },
+      {
+        "id": "caller-context",
+        "kind": "text",
+        "title": "Caller context · not telemetry",
+        "size": 5,
+        "color": "purple",
+        "text": [
+          "Caller pins the diff and standards/spec sources; labels do not assign roles.",
+          "No spec available: use review-no-spec.layout.json; no Spec worker is implied.",
+          "Verdict is caller-authored, not observed agent completion."
+        ]
+      }
+    ]
+  }
+}

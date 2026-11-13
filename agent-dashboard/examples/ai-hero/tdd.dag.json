@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "name": "AI Hero example · caller-declared red-green loop",
+  "nodes": [
+    {
+      "id": "lead",
+      "label": "Lead session",
+      "color": "peach",
+      "bind": {
+        "actor": "lead"
+      }
+    },
+    {
+      "id": "red",
+      "label": "Red · reported step",
+      "color": "red",
+      "bind": {
+        "task": "replace-with-reported-red-task-id"
+      },
+      "meta": [
+        "Not inferred from test tools"
+      ]
+    },
+    {
+      "id": "green",
+      "label": "Green · reported step",
+      "color": "green",
+      "bind": {
+        "task": "replace-with-reported-green-task-id"
+      },
+      "meta": [
+        "Not proof that tests passed"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "lead",
+      "to": "red",
+      "label": "agreed seam"
+    },
+    {
+      "from": "red",
+      "to": "green",
+      "label": "caller-declared transition"
+    },
+    {
+      "from": "green",
+      "to": "red",
+      "label": "next agreed slice",
+      "style": "return"
+    }
+  ]
+}

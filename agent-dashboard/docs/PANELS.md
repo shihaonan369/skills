@@ -1,0 +1,100 @@
+# Panel interface v1
+
+**Caller owns composition; dashboard owns rendering and local observation.**
+A **Panel** is a rectangular TUI surface. A **buffer** is the bounded data shown
+inside it. A **layout** composes panels through rows/columns. There is no workflow
+engine, stage detector, agent router, role classifier, or automatic graph builder.
+Changing a layout never starts/stops agents or changes work items/permissions.
+
+## Publish a layout
+
+After `start --session ID`, send one JSON object with `layout --session ID --json
+@file.json` (or an inline JSON argument). The update is atomic and the viewer
+picks it up at its next refresh. A rejected layout leaves the previous one intact.
+Use a private working file for live IDs or sensitive text; keep it outside git.
+
+```json
+{
+  "version": 1,
+  "name": "My caller's workspace",
+  "root": {
+    "kind": "column",
+    "children": [
+      {"id": "s", "kind": "session", "title": "Current session", "size": 8},
+      {"kind": "row", "stack_below": 72, "children": [
+        {"id": "a", "kind": "agents", "title": "Workers", "weight": 2},
+        {"id": "p", "kind": "tasks", "title": "Existing plan", "weight": 3}
+      ]},
+      {"id": "log", "kind": "events", "size": 7}
+    ]
+  }
+}
+```
+
+This is an illustrative **composition**, not a prescribed workflow. Swap it for
+one text panel, a grid made from nested rows/columns, independent worker boxes,
+or a completely different arrangement. See [`../examples/ai-hero/README.md`](../examples/ai-hero/README.md)
+for two caller-chosen compositions using the locally inspected AI Hero skills.
+
+## Composition nodes
+
+| Field | Meaning |
+| --- | --- |
+| `kind` | `row` (left to right) or `column` (top to bottom) |
+| `children` | Nonempty ordered array; caller order is preserved |
+| `size` | Optional fixed cells along the parent's active axis |
+| `weight` | Optional positive relative share of remaining cells; default 1 |
+| `stack_below` | Only meaningful on a row: caller explicitly chooses the width below which it becomes a column |
+
+All sizes/weights are integers 0..1000; 0 means omitted. Fixed requests are
+honored when they fit; if their sum exceeds available cells, they shrink
+proportionally and flexible children may have no space. The renderer never
+reorders panels or invents a different process. When a leaf is too small to
+render, the footer counts it. Resize or change the caller layout. `stack_below`
+is opt-in; there is no hidden automatic rearrangement. Fixed `size` applies to
+the new active axis after stacking. All-fixed children can leave blank space.
+
+## Leaf panels
+
+Every leaf needs a unique printable `id` (at most 80 bytes). Optional `title`
+(default: ID), `size`, `weight`, and `color`: `peach`, `mint`, `blue`, `purple`,
+`red`, `gray`, `teal`, `orange`, `green`, `amber`, `white`. Purple focus
+highlighting is a UI state, not an advisor role. Focus uses heavy purple borders
+and a bold heading; unfocused Panels use thin rounded borders with the same geometry.
+
+| `kind` | Buffer/data binding | Optional fields |
+| --- | --- | --- |
+| `session` | Root Claude session: last observed lifecycle, model, reported task fraction, elapsed time | none |
+| `agent` | One **actual observed** actor; absent actors show not observed/unknown | required `actor` (use `lead` for root agent) |
+| `agents` | Observed subagents in start order; no inferred parent edges | `actors`: list of actual IDs to include; omitted = all observed workers |
+| `tasks` | Reported native/explicit task metadata, owner and dependencies | `task_ids`: IDs to include; omitted = all nondeleted tasks |
+| `events` | Newest-first bounded event buffer | `actors`: actor ID filter; omitted = all |
+| `text` | Caller-authored operational text, explicitly labelled **not hook telemetry** | `text`: array of lines |
+| `dag` | Caller-declared directed graph; node states bind observed actor/task IDs | required `dag`: version-1 graph object; see [DAG contract](DAG.md) |
+
+An ID placeholder is **not** an agent. Giving a panel the title “reviewer” never
+creates, classifies or assigns that role. Titles are presentation; actor bindings
+must use real IDs from `status` or native results. Ownership names are not silently
+mapped to IDs. Caller-authored text is never parsed as tool/agent status.
+
+Limits: one object ≤256 KiB, ≤64 total nodes, depth ≤8, text ≤128 lines per leaf,
+≤2000 input bytes/line (display/storage sanitize to ≤400 runes), title ≤160 bytes,
+actor ID ≤120 bytes. Unknown fields/kinds, duplicate IDs, inappropriate bindings,
+invalid sizes and excessive nesting are errors. Terminal controls/bidi overrides
+are stripped. Long lines clip by terminal cell width, including CJK/emoji.
+
+## Keyboard and lifetime
+
+- `Tab`/`Shift-Tab` or `j`/`k`: focus leaf panels in caller tree order.
+- Up/down/PgUp/PgDn: independent vertical scroll per focused buffer.
+- Left/right: horizontal pan in the focused DAG Panel; Home resets both axes.
+- `1`: caller canvas. `2`/`3`: full-screen task/event **diagnostic buffers**;
+  these do not replace the caller's layout or impose workflow stages.
+- `a`: toggle DAG flow/spinner/pulse animation (decorative edges, not traffic).
+- `p`: freeze displayed snapshot and animation; collection continues.
+- `?`/Esc: help; `q`/Ctrl-C: close viewer only.
+
+Layout and bounded telemetry are local to one opted-in Claude session. There is
+no renderer daemon, network port, workflow subprocess, or remote agent command.
+The viewer can be reopened from another terminal on the **same host/data root**.
+Several viewers can observe the same persisted layout independently.

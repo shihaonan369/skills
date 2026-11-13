@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "name": "issue loop · intake → triage → grill → pr (autonomous, long-running)",
+  "nodes": [
+    {
+      "id": "intake",
+      "label": "issue intake",
+      "color": "amber",
+      "bind": { "actor": "lead" },
+      "meta": ["queue · auto-label", "dedupe + link"]
+    },
+    {
+      "id": "triage",
+      "label": "triage",
+      "color": "blue",
+      "bind": { "task": "1" },
+      "meta": ["route by area/risk"]
+    },
+    {
+      "id": "grill",
+      "label": "grill",
+      "color": "purple",
+      "bind": { "task": "2" },
+      "meta": ["stress-test the plan"]
+    },
+    {
+      "id": "pr",
+      "label": "pr",
+      "color": "green",
+      "bind": { "task": "3" },
+      "meta": ["implement + PR body"]
+    }
+  ],
+  "edges": [
+    { "from": "intake", "to": "triage", "label": "next" },
+    { "from": "triage", "to": "grill", "label": "plan" },
+    { "from": "grill", "to": "pr", "label": "pass" },
+    { "from": "pr", "to": "intake", "label": "↻ next issue", "style": "return" }
+  ]
+}
