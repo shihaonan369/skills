@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PROTOTYPE · DAG 链路聚焦</title>
+<!-- Throwaway, synthetic, read-only. Three structurally different terminal sketches on one file route, ?variant=A|B|C. No production code, no network, no persistence except shareable URL view parameters. -->
+<style>
+:root{color-scheme:dark;--bg:#10131a;--panel:#181d27;--ink:#dce2ed;--muted:#9ca8bc;--purple:#c4a3ff;--mint:#8cdbbc;--peach:#f5b99a}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:22px 26px 110px}h1{font:600 22px/1.4 system-ui;margin:8px 0}h2{font-size:15px;margin:0 0 10px}p{margin:6px 0}.muted{color:var(--muted)}.badge{color:var(--peach);border:1px solid #805f4e;padding:3px 8px}button,select{font:inherit;background:#242c3b;color:var(--ink);border:1px solid #465169;padding:5px 10px;border-radius:4px;cursor:pointer}button:hover{border-color:var(--purple)}button:focus-visible,select:focus-visible{outline:2px solid var(--purple);outline-offset:3px}button[aria-pressed=true]{background:#3e3156;border-color:var(--purple);color:#fff}.controls{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:18px 0 12px}.nodes{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}.surface{background:var(--panel);border:1px solid #465169;padding:12px;margin-top:12px;min-width:0}.title{color:var(--purple);border-bottom:1px solid #394259;padding-bottom:8px;margin-bottom:10px}.workspace{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:12px}.workspace .surface{margin-top:0}.graph-scroll{overflow:auto}.graph{font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre;margin:0;min-height:432px}.c-node{cursor:pointer}.dim{color:#69778f}.normal{color:#b8c3d5}.sel{color:#f0dbff}.in{color:var(--peach)}.out{color:var(--mint)}.both{color:var(--purple)}.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}table{border-collapse:collapse;width:100%;font-size:13px}td,th{text-align:left;border-bottom:1px solid #323c50;padding:6px 8px;white-space:nowrap}th{color:var(--muted);font-weight:normal}.table-scroll{overflow:auto}details{margin-top:16px}summary{cursor:pointer;color:var(--muted)}#state{white-space:pre-wrap;overflow-wrap:anywhere;color:#a7b5ca;font-size:12px}.switcher{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:#ebe4fa;color:#211931;border:2px solid #c4a3ff;border-radius:12px;padding:8px 12px;box-shadow:0 8px 24px #0008;z-index:10;white-space:nowrap}.switcher button{background:#322541;color:#fff}.decision{border-left:3px solid var(--purple);padding:6px 12px;margin-top:14px}.aside-row{margin:10px 0;overflow-wrap:anywhere}@media(max-width:1000px){.workspace{grid-template-columns:1fr}body{padding:15px 12px 110px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+<header><span class="badge">THROWAWAY PROTOTYPE · SYNTHETIC DEMO · 非实时遥测</span><h1>DAG 链路聚焦 / 三种交互草图</h1><p class="muted">只回答“选中节点后怎样看关系”。字符画模拟终端信息密度，不代表最终单元格布局、Go 渲染效果或已验证的平台兼容性。</p></header>
+<div class="controls"><label>范围 <select id="mode"><option value="neighbors">直接邻居</option><option value="up">所有上游</option><option value="down">所有下游</option><option value="both">上下游合看</option></select></label><label><input id="returns" type="checkbox" checked> 聚焦包含声明的 return 边</label><button id="reset">清除聚焦</button></div>
+<div class="nodes" id="nodes" aria-label="选择节点"></div>
+<p class="muted">节点按钮或 [ / ] 切换节点；← / → 比较方案。图中箭头始终表示声明方向，不表示消息已发生。取消 return 只改变聚焦范围，不删除图中的声明边。</p>
+<main id="main"></main>
+<div class="decision" id="decision"></div>
+<details><summary>展开当前完整相关状态（节点、声明边、聚焦计算结果）</summary><pre id="state"></pre></details>
+<nav class="switcher" aria-label="原型方案切换"><button id="prev" aria-label="上一个方案">←</button><strong id="variant-label"></strong><button id="next" aria-label="下一个方案">→</button></nav>
+<script>
+const nodes=[
+{id:'lead',label:'Lead',status:'demo: running',bind:'synthetic actor: lead',x:34,y:0},
+{id:'relay',label:'Relay',status:'demo: running',bind:'synthetic actor: relay',x:34,y:5},
+{id:'review',label:'Reviewer',status:'unobserved / unknown',bind:'synthetic absent actor',x:8,y:11},
+{id:'test',label:'Tester',status:'demo: returned',bind:'synthetic actor: tester',x:60,y:11},
+{id:'gate',label:'Gate annotation',status:'declared only',bind:null,x:34,y:18},
+{id:'archive',label:'Archive',status:'demo: completed',bind:'synthetic task: archive',x:34,y:24},
+{id:'note',label:'Isolated note',status:'declared only',bind:null,x:86,y:24}
+];
+const edges=[
+{id:'e1',from:'lead',to:'relay',style:'solid',label:'delegate',p:[[45,3],[45,5]]},
+{id:'e2',from:'relay',to:'review',style:'solid',label:'review branch',p:[[40,8],[40,9],[19,9],[19,11]]},
+{id:'e3',from:'relay',to:'test',style:'solid',label:'test branch',p:[[50,8],[50,9],[71,9],[71,11]]},
+{id:'e4',from:'review',to:'gate',style:'solid',label:'findings',p:[[19,14],[19,16],[40,16],[40,18]]},
+{id:'e5',from:'test',to:'gate',style:'dashed',label:'test findings',p:[[71,14],[71,16],[50,16],[50,18]]},
+{id:'e6',from:'gate',to:'archive',style:'solid',label:'declared next',p:[[45,21],[45,24]]},
+{id:'e7',from:'review',to:'lead',style:'return',label:'report to lead',p:[[8,12],[2,12],[2,1],[34,1]]},
+{id:'e8',from:'test',to:'lead',style:'return',label:'report to lead',p:[[83,12],[113,12],[113,1],[57,1]]},
+{id:'e9',from:'archive',to:'relay',style:'return',label:'declared retry',p:[[45,27],[45,30],[115,30],[115,6],[57,6]]},
+{id:'e10',from:'review',to:'review',style:'return',label:'self annotation',p:[[8,13],[5,13],[5,10],[12,10],[12,11]]},
+{id:'e11',from:'relay',to:'lead',style:'return',label:'paired reply to e1',p:[[34,6],[0,6],[0,1],[34,1]]}
+];
+const names={A:'原图聚焦',B:'原图 + 关系侧栏',C:'关系账本优先'};
+const notes={A:'A：原图位置不动，无关节点与边变暗。信息最集中；密图中仍需依靠边清单辨认交叉。推荐作为默认方向。',B:'B：不降低上下文亮度，改用边前缀和侧栏解释关系。更容易核对声明，但横向空间成本更高。',C:'C：先看精确的关系账本，原图成为下方参考。最容易分清双向声明和回边，但空间拓扑感较弱。'};
+const params=new URLSearchParams(location.search);
+let variant=names[params.get('variant')]?params.get('variant'):'A';
+let selected=nodes.some(n=>n.id===params.get('node'))?params.get('node'):'review';
+let mode=['neighbors','up','down','both'].includes(params.get('mode'))?params.get('mode'):'neighbors';
+let returns=params.get('returns')!=='0';
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function compute(){
+ const ins=new Set(),outs=new Set(),inE=new Set(),outE=new Set();
+ const eligible=edges.filter(e=>returns||e.style!=='return');
+ function trace(up){const seen=new Set([selected]),queue=[selected];while(queue.length){const cur=queue.shift();for(const e of eligible){if((up?e.to:e.from)!==cur)continue;const next=up?e.from:e.to;(up?ins:outs).add(next);(up?inE:outE).add(e.id);if(mode!=='neighbors'&&!seen.has(next)){seen.add(next);queue.push(next);}}}}
+ if(selected){if(mode!=='down')trace(true);if(mode!=='up')trace(false)}
+ return {ins,outs,inE,outE};
+}
+function role(id,a,b){return a.has(id)&&b.has(id)?'both':a.has(id)?'in':b.has(id)?'out':'dim'}
+const glyph={sel:'*',in:'<',out:'>',both:'=',dim:'.',normal:' '};
+function legend(){return '<div class="legend"><span class="sel">[*] 选中</span><span class="in">[&lt;] 上游 / 入边</span><span class="out">[&gt;] 下游 / 出边</span><span class="both">[=] 两者皆是</span><span class="muted">[.] 无关 · return 用 : 线</span></div>'}
+function graph(c){
+ const W=118,H=32,grid=Array.from({length:H},()=>Array.from({length:W},()=>({ch:' ',cl:'normal',node:''})));
+ function put(x,y,ch,cl,node=''){if(x>=0&&x<W&&y>=0&&y<H)grid[y][x]={ch,cl,node}}
+ function line(x,y,s,cl,node){[...s].forEach((ch,i)=>put(x+i,y,ch,cl,node))}
+ for(const e of edges){const r=role(e.id,c.inE,c.outE),cl=!selected?'normal':r==='dim'&&variant!=='A'?'normal':r;for(let i=1;i<e.p.length;i++){const [x,y]=e.p[i-1],[xx,yy]=e.p[i],dx=Math.sign(xx-x),dy=Math.sign(yy-y);let a=x,b=y;while(a!==xx||b!==yy){put(a,b,e.style==='return'?':':e.style==='dashed'?'·':dx?'─':'│',cl);a+=dx;b+=dy}put(xx,yy,e.style==='return'?':':'+',cl)}const p=e.p.at(-1),q=e.p.at(-2);put(p[0]-Math.sign(p[0]-q[0]),p[1]-Math.sign(p[1]-q[1]),p[0]>q[0]?'▶':p[0]<q[0]?'◀':p[1]>q[1]?'▼':'▲',cl)}
+ for(const n of nodes){const r=n.id===selected?'sel':role(n.id,c.ins,c.outs),cl=!selected?'normal':r==='dim'&&variant!=='A'?'normal':r;const content=[`┌${'─'.repeat(22)}┐`,`│${((selected?glyph[r]:' ')+ ' '+n.label).padEnd(22).slice(0,22)}│`,`│${n.status.padEnd(22).slice(0,22)}│`,`└${'─'.repeat(22)}┘`];content.forEach((s,i)=>line(n.x,n.y+i,s,cl,n.id))}
+ return '<div class="graph-scroll"><pre class="graph" aria-label="合成声明图">'+grid.map(row=>{let html='',cur=null,txt='';function flush(){if(!cur)return;html+=`<span class="${cur.cl}${cur.node?' c-node':''}"${cur.node?` data-node="${cur.node}"`:''}>${esc(txt)}</span>`}for(const cell of row){if(!cur||cur.cl!==cell.cl||cur.node!==cell.node){flush();cur=cell;txt=''}txt+=cell.ch}flush();return html}).join('\n')+'</pre></div>';
+}
+function rows(c,all){return edges.filter(e=>all||c.inE.has(e.id)||c.outE.has(e.id)).map(e=>{const r=role(e.id,c.inE,c.outE);return `<tr><td class="${r}">[${glyph[r]}]</td><td>${esc(e.from)} → ${esc(e.to)}</td><td>${esc(e.style)}</td><td>${esc(e.label)}</td></tr>`}).join('')||'<tr><td colspan="4">没有符合范围的声明边（这不是“没有实际消息”的证明）。</td></tr>'}
+function table(c,all=false){return '<div class="table-scroll"><table><thead><tr><th>关系</th><th>声明方向</th><th>线型</th><th>调用方标签</th></tr></thead><tbody>'+rows(c,all)+'</tbody></table></div>'}
+function sidebar(c){const n=nodes.find(n=>n.id===selected);return `<aside class="surface"><h2>聚焦解释 / 非遥测</h2><div class="aside-row">选中：${n?esc(n.id):'无'}</div><div class="aside-row">绑定：${n?esc(n.bind??'无 · 仅声明'):'—'}</div><div class="aside-row">状态：${n?esc(n.status):'—'}</div><div class="aside-row in">上游：${esc([...c.ins].filter(id=>id!==selected).join(', ')||'无')}</div><div class="aside-row out">下游：${esc([...c.outs].filter(id=>id!==selected).join(', ')||'无')}</div><p class="muted">回边可能使同一节点同时属于上游和下游。使用有限可达集合，不枚举无限路径；自回边不会重复展开。</p><p class="muted">未知状态仍可被聚焦；选中与运行状态无关。这里不推断关键路径、消息到达或依赖解锁。</p></aside>`}
+function syncURL(){const p=new URLSearchParams({variant,node:selected||'none',mode,returns:returns?'1':'0'});try{history.replaceState(null,'','?'+p)}catch{}}
+function render(){const c=compute();document.getElementById('mode').value=mode;document.getElementById('returns').checked=returns;document.getElementById('nodes').innerHTML=nodes.map(n=>`<button data-node="${n.id}" aria-pressed="${selected===n.id}">${esc(n.label)}</button>`).join('');const graphPanel=`<section class="surface"><div class="title">DEMO / Declared topology · ${selected||'未选择'} · ${document.getElementById('mode').selectedOptions[0].text}</div>${graph(c)}${legend()}</section>`;document.getElementById('main').innerHTML=variant==='A'?graphPanel+`<section class="surface"><h2>聚焦边清单 · 精确核对方向</h2>${table(c)}</section>`:variant==='B'?`<div class="workspace">${graphPanel}${sidebar(c)}</div><section class="surface">${table(c)}</section>`:`<div class="workspace"><section class="surface"><h2>关系账本 / 聚焦项置顶展示</h2>${table(c)}</section>${sidebar(c)}</div><details open><summary>保留原图作空间参考（不重排节点）</summary>${graphPanel}</details>`;document.getElementById('variant-label').textContent=variant+' · '+names[variant];document.getElementById('decision').textContent=notes[variant];document.getElementById('state').textContent=JSON.stringify({prototype:true,synthetic:true,variant,selected,mode,includeReturnEdges:returns,upstream:[...c.ins],downstream:[...c.outs],highlightedIncomingEdges:[...c.inE],highlightedOutgoingEdges:[...c.outE],nodes,edges},null,2);syncURL()}
+function cycle(delta){variant=['A','B','C'][(['A','B','C'].indexOf(variant)+delta+3)%3];render()}
+document.getElementById('prev').onclick=()=>cycle(-1);document.getElementById('next').onclick=()=>cycle(1);document.getElementById('mode').onchange=e=>{mode=e.target.value;render()};document.getElementById('returns').onchange=e=>{returns=e.target.checked;render()};document.getElementById('reset').onclick=()=>{selected='';render()};document.addEventListener('click',e=>{const b=e.target.closest('[data-node]');if(b){selected=b.dataset.node;render()}});document.addEventListener('keydown',e=>{if(e.target.closest('input,textarea,select,button,[contenteditable]'))return;if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();cycle(e.key==='ArrowLeft'?-1:1)}if(e.key==='['||e.key===']'){const i=nodes.findIndex(n=>n.id===selected);selected=nodes[(i+(e.key===']'?1:-1)+nodes.length)%nodes.length].id;render()}});
+if(params.get('node')==='none')selected='';render();
+</script>
+</html>

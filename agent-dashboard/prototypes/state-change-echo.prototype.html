@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PROTOTYPE · 状态变更回响</title>
+<!-- Throwaway synthetic state model. No live data, network, runtime dependencies, storage or product mutations. Clock advances only by explicit buttons; this is NOT an animation timing acceptance test. -->
+<style>
+:root{color-scheme:dark;--bg:#11151d;--panel:#1a202c;--ink:#e0e6f0;--muted:#a1aec2;--accent:#c8abff}*{box-sizing:border-box}body{margin:0;padding:24px;max-width:1340px;margin:auto;background:var(--bg);color:var(--ink);font:14px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}h1{font:600 24px/1.4 system-ui}h2{font-size:16px;margin:0 0 12px}p{margin:8px 0}.muted{color:var(--muted)}.badge{color:var(--accent);border:1px solid #695283;padding:4px 8px}button{font:inherit;color:var(--ink);background:#273043;border:1px solid #4d5b76;border-radius:4px;padding:6px 10px;cursor:pointer}button:hover,button[aria-selected=true]{border-color:var(--accent);background:#3c3052}button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}button:disabled{opacity:.5;cursor:default}.surface{background:var(--panel);border:1px solid #46516a;padding:16px;margin:16px 0}.grid{display:grid;grid-template-columns:minmax(360px,1.25fr) minmax(300px,1fr);gap:16px}.grid .surface{margin:0}.actions,.tabs{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.card{border:1px solid var(--accent);padding:12px;height:280px;overflow:hidden}.field{display:grid;grid-template-columns:24px 120px 1fr;gap:6px;height:34px;padding:4px;border-left:3px solid transparent}.field.changed{background:#30283f;border-left-color:var(--accent)}.marker{color:var(--accent)}.value{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.summary{height:52px;overflow:auto;color:var(--accent);margin-top:10px}.line{margin:7px 0;overflow-wrap:anywhere}.steps{display:flex;gap:7px;flex-wrap:wrap}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#adbbcf;font-size:12px}details{margin:18px 0}summary{cursor:pointer;color:var(--muted)}@media(max-width:850px){body{padding:14px}.grid{grid-template-columns:1fr}.field{grid-template-columns:20px 95px 1fr}}
+</style>
+<header><span class="badge">THROWAWAY · SYNTHETIC DEMO · 无实时遥测</span><h1>状态变更回响：什么时候强调，什么时候保持安静？</h1><p>这里检验的是反馈规则，不是最终动效。每次点按都展示完整相关状态；时钟由你手动推进，避免动画干扰判断。</p><p class="muted">提案：只强调改变的行，持续 1200 ms（模拟）；变化摘要留到下一次变更或主动清除。初次加载、重复快照、重新打开及恢复后的基线不补闪。工具错误与 Agent 生命周期分开显示。</p></header>
+<div class="grid"><section class="surface"><h2>当前显示 / DEMO Agent card</h2><div class="card" id="card"></div><div class="summary" id="summary"></div></section><aside class="surface"><h2>查看器状态</h2><div id="viewer"></div><p class="muted">本草图不改变卡片尺寸，不移动焦点或页面滚动。暂停只冻结显示，合成“采集端”仍可变化。恢复直接接最新基线，不排队播放旧变化。</p><p class="muted">动作不代表合法工作流：你可以任意组合，暴露反馈规则的边界。未知值仍然未知；returned / stopped 不算 completed。</p></aside></div>
+<section class="surface"><h2>自由试用</h2><div class="actions" id="actions"></div><p id="notice" aria-live="polite"></p></section>
+<section class="surface"><h2>引导场景</h2><div class="tabs" id="tabs" role="tablist" aria-label="引导场景"></div><div role="tabpanel" id="walkthrough"></div></section>
+<details><summary>完整相关状态（合成源、显示快照、差异与模拟时钟）</summary><pre id="state"></pre></details>
+<script>
+// Portable pure reducer: no DOM, timers, I/O, or real telemetry. Prototype proposal only.
+const fields={actor:'Agent 状态',active:'活动工具',toolErrors:'工具错误',task:'任务状态',model:'模型'};
+const initial=()=>({source:{actor:'unknown',active:[],toolErrors:0,task:'unknown',model:null},view:{actor:'unknown',active:[],toolErrors:0,task:'unknown',model:null},clock:0,paused:false,motion:true,history:false,echo:[],until:0,summary:[],notice:'初次加载：建立基线，不触发强调。',seq:0});
+function reducer(previous,action){
+ const s=structuredClone(previous),a=action;
+ const baseline=()=>{s.view=structuredClone(s.source);s.echo=[];s.until=0;s.summary=[]};
+ if(a==='reset')return initial();
+ if(a==='tick'){s.clock+=400;if(s.clock>=s.until)s.echo=[];s.notice='模拟时钟前进 400 ms；变化摘要不随短暂强调消失。';return s}
+ if(a==='pause'){s.paused=!s.paused;if(s.paused){s.echo=[];s.until=0;s.notice='显示已冻结；后续合成源变化不进入显示或回响队列。'}else{baseline();s.notice='恢复：直接接最新基线，不补闪暂停期间的变化。'}return s}
+ if(a==='motion'){s.motion=!s.motion;s.echo=[];s.until=0;s.notice=s.motion?'开启效果；不重播已有变化。':'关闭效果：短暂强调移除，文字状态与变化摘要保留。';return s}
+ if(a==='history'){s.history=!s.history;s.echo=[];s.until=0;s.notice=s.history?'模拟查看历史：新数据仍更新卡片，但不触发强调或跳动。':'回到当前：不重播历史期间变化。';return s}
+ if(a==='reopen'){s.paused=false;baseline();s.notice='模拟重新打开查看器：已有观测作为基线，不播放旧变化。';return s}
+ if(a==='clear'){s.summary=[];s.echo=[];s.until=0;s.notice='仅清除本地变化提示，不修改合成源。';return s}
+ if(a==='run')s.source.actor='running';
+ if(a==='tool'){s.seq++;s.source.active.push('demo-call-'+s.seq)}
+ if(a==='fail'){s.source.toolErrors++;if(s.source.active.length)s.source.active.shift()}
+ if(a==='finish-tool'){if(s.source.active.length)s.source.active.shift()}
+ if(a==='task')s.source.task='completed';
+ if(a==='model')s.source.model='demo-model';
+ if(a==='returned')s.source.actor='returned';
+ if(a==='stop')s.source.actor='stopped';
+ if(a==='batch'){s.source.toolErrors++;s.source.model='demo-model';s.source.task='completed'}
+ if(s.paused){s.notice='合成源已更新（或收到重复快照）；显示仍冻结，无新增强调。';return s}
+ const changed=Object.keys(fields).filter(k=>JSON.stringify(s.source[k])!==JSON.stringify(s.view[k]));
+ if(!changed.length){s.notice='内容未变：不重置强调时长，不新增变化摘要。';return s}
+ s.view=structuredClone(s.source);s.summary=changed;s.echo=s.motion&&!s.history?changed:[];s.until=s.echo.length?s.clock+1200:0;
+ s.notice='新变化：'+changed.map(k=>fields[k]).join('、')+'。'+(s.echo.length?'仅强调对应行；不会将工具错误升级为 Agent 失败。':'效果关闭或正在看历史：只更新文字，不播放强调。');
+ return s;
+}
+const actions=[['run','Agent 开始工作'],['tool','新增工具调用'],['finish-tool','一个工具返回'],['fail','一个工具报错'],['task','任务明确完成'],['returned','Agent 返回'],['stop','Agent 停止'],['model','收到模型信息'],['batch','同批三项变化'],['duplicate','重复同一快照'],['pause','暂停 / 恢复'],['motion','效果开 / 关'],['history','查看历史 / 当前'],['reopen','模拟重新打开'],['tick','时间 +400 ms'],['clear','清除变化提示'],['reset','重置全部']];
+const scenarios=[
+{title:'错误不是 Agent 失败',text:'先出现两个并行工具，一个报错不能清掉另一个；任务完成也不能宣告 Agent 成功结束。',steps:['run','tool','tool','fail','task','returned']},
+{title:'暂停后不补闪',text:'冻结显示后继续收到数据；恢复直接采用最新值，不连播旧提示。此处规则是提案。',steps:['run','pause','model','task','pause']},
+{title:'重复与重新打开',text:'重复快照不延长强调；重开把现有状态作为基线，不把旧活动当新事件。',steps:['tool','tick','duplicate','tick','reopen','duplicate']},
+{title:'静态与历史',text:'关闭效果后仍能读到变化；查看历史不因新数据触发强调或跳转。',steps:['motion','batch','history','tool','history','motion','duplicate']},
+{title:'同批多变化',text:'模型、任务和工具错误同批出现时，分别强调对应行；Agent 状态不被升级成失败。推进 1200 ms 后只留下摘要。',steps:['run','batch','tick','tick','tick']}
+];
+let state=initial(),scenario=0,step=0;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function value(k,v){if(v===null)return 'unknown';if(Array.isArray(v))return v.length?v.join(', '):'无活动调用（仅此快照）';return String(v)}
+function render(){document.getElementById('card').innerHTML='<p class="muted">DEMO reviewer · 最后观测状态，不是心跳</p>'+Object.keys(fields).map(k=>`<div class="field ${state.echo.includes(k)?'changed':''}"><span class="marker">${state.echo.includes(k)?'▸':state.summary.includes(k)?'·':''}</span><span>${fields[k]}</span><span class="value">${esc(value(k,state.view[k]))}</span></div>`).join('');document.getElementById('summary').textContent=state.summary.length?'最近一批变化：'+state.summary.map(k=>fields[k]).join(' / ')+'（静态摘要）':'没有新的变化提示';document.getElementById('viewer').innerHTML=[['模拟时钟',state.clock+' ms'],['显示',state.paused?'PAUSED':'当前'],['效果',state.motion?'开':'关'],['历史模式',state.history?'是':'否'],['短暂强调剩余',state.echo.length?Math.max(0,state.until-state.clock)+' ms':'无'],['合成源 / 显示差异',JSON.stringify(state.source)===JSON.stringify(state.view)?'一致':'不同：显示已冻结']].map(([k,v])=>`<div class="line"><span class="muted">${k}：</span>${esc(v)}</div>`).join('');document.getElementById('notice').textContent=state.notice;document.getElementById('state').textContent=JSON.stringify(state,null,2);document.getElementById('tabs').innerHTML=scenarios.map((s,i)=>`<button role="tab" aria-selected="${i===scenario}" data-scenario="${i}">${s.title}</button>`).join('');const s=scenarios[scenario];document.getElementById('walkthrough').innerHTML=`<p>${s.text}</p><p class="muted">切换场景会重置到基线。当前进度 ${step}/${s.steps.length}；自由试用不推进引导步骤。</p><div class="steps">`+s.steps.map((a,i)=>`<button data-step="${i}" ${i!==step?'disabled':''}>${i+1}. ${esc(actions.find(x=>x[0]===a)[1])}${i<step?' ✓':''}</button>`).join('')+'</div>'}
+document.getElementById('actions').innerHTML=actions.map(([a,l])=>`<button data-action="${a}">${l}</button>`).join('');
+// Restore focus after replacing scenario controls; never scroll the page to that control.
+function update(){const focused=document.activeElement;const action=focused?.dataset.action;const selectedScenario=focused?.dataset.scenario;const selectedStep=focused?.dataset.step;render();if(action)document.querySelector(`[data-action="${action}"]`)?.focus({preventScroll:true});else if(selectedScenario!==undefined)document.querySelector(`[data-scenario="${selectedScenario}"]`)?.focus({preventScroll:true});else if(selectedStep!==undefined){const next=document.querySelector(`[data-step="${step}"]:not(:disabled)`);(next??document.querySelector(`[data-scenario="${scenario}"]`))?.focus({preventScroll:true})}}
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.action){state=reducer(state,b.dataset.action);if(b.dataset.action==='reset')step=0}else if(b.dataset.scenario!==undefined){scenario=Number(b.dataset.scenario);step=0;state=initial()}else if(b.dataset.step!==undefined&&Number(b.dataset.step)===step){state=reducer(state,scenarios[scenario].steps[step]);step++}update()});
+render();
+</script></html>
