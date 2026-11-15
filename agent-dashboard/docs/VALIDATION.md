@@ -1,12 +1,31 @@
 # Validation matrix · local 0.1.0
 
-Latest checks recorded **2026-11-14 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
+Latest checks recorded **2026-11-15 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
 Historical sections below retain their original scope.
 Local build toolchain: **Go 1.27.4**, archive SHA-256 checked before extraction
 into ignored `.build-tools/go/`; no system-wide toolchain/runtime installed.
 Claude Code: **2.1.312**. This is a local unsigned build, not a published release.
 
-## Link focus and observed change echoes (current local build)
+## Release preparation (2026-11-15)
+
+The source-only repository had no GitHub Release assets, so a fresh checkout
+could not run the advertised executable. Distribution now explicitly separates
+source checkouts from ready-to-use platform skill ZIPs. README download links
+cover macOS, Windows and Linux, each in x64/ARM64.
+
+The packager generates a separate `target/release/SHA256SUMS` containing the six
+ZIP basenames, suitable for download-directory verification; the existing local
+`target/SHA256SUMS` still covers binaries plus archives. A regression test verifies
+basename-only checksums and rejects a missing archive. The test first failed
+before the helper existed, then passed after the fix.
+
+`go test -race -cover ./...` and `go vet ./...` passed after this packaging-only
+change: core coverage **91.3%**, CLI **61.7%**, packager **4.7%**. No new runtime
+behavior or non-Mac runtime verification is claimed. Release publication is gated
+on the requested privacy/history cleanup; existing source/publication history
+must not be described as fully redacted before that is complete.
+
+## Link focus and observed change echoes (preceding implementation check)
 
 | Scope | Result / exact boundary |
 | --- | --- |

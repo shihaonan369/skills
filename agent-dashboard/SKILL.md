@@ -24,8 +24,10 @@ The skill directory is `${CLAUDE_SKILL_DIR}`. Select its bundled binary using th
 
 In commands below, replace `<D>` with that quoted absolute executable path;
 PowerShell uses `& '<path>'`. Run `<D> doctor`. If the binary is absent, report a
-missing package/build instead of installing an end-user runtime or reviving the
-legacy implementation. If hooks are not configured, explain the one-time
+missing platform package and direct the user to the ready-to-use ZIPs in
+[GitHub Releases](https://github.com/shihaonan369/skills/releases/latest), as
+explained in `README.md` → Download. A source checkout alone is not a runtime
+package; do not install an end-user runtime or revive the legacy implementation. If hooks are not configured, explain the one-time
 `<D> install --skill-dir "${CLAUDE_SKILL_DIR}"` step, get permission before changing
 settings, and request a fresh Claude session after installation. See `README.md`
 for Windows linking/permissions and platform verification constraints.
