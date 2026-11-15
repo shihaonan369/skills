@@ -10,6 +10,12 @@
    snapshot. Bubble Tea + Lip Gloss provide terminal IO, color, resize, Unicode
    cell sizing and Windows support. The pure-Go executable has no runtime install.
 
+Viewer-local `link_focus.go` computes declared reachability and an optional
+in-leaf inspector; `echo.go` compares observed field values and decorates rows.
+Neither changes storage, hook ingestion or the version-1 layout schema. Snapshot
+reads carry a viewer generation so reads started before pause cannot overwrite
+the post-resume baseline. Change/acknowledgement state is not persisted.
+
 The small composition interface is documented in `PANELS.md`. Rendering is
 separate from ingestion; layout updates never call agent tools or mutate tasks.
 The installed source is this skill directory, not a copy under an app's config.

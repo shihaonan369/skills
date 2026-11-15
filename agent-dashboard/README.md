@@ -128,7 +128,13 @@ or Claude run. A real Claude smoke test is reported separately in validation.
 
 This composes a native DAG with task/event Panels using isolated synthetic data.
 Tab focuses panels with a heavy highlighted frame; up/down scroll, left/right
-pan the DAG, Home resets its viewport. Declared edges have decorative moving
+pan the DAG, Home resets its viewport. `[` / `]` select a DAG node, `f` changes
+relationship scope, `r` toggles return participation, `i` opens optional relation
+details, and `c` clears selection. These inspect declarations, not traffic.
+Observed field changes briefly emphasize only the affected row, with a static
+marker/summary retained after the effect; `x` clears that local summary. See the
+[Panel contract](docs/PANELS.md#observed-change-echoes) for baseline/history rules.
+Declared edges have decorative moving
 packets and short trails (not measured traffic); `a` toggles motion, `p` freezes
 the displayed snapshot and animation while hooks continue collecting. Embed the `dag` object into any caller layout; ordinary cycles are
 rejected, and explicit return annotations do not execute a loop.

@@ -312,12 +312,16 @@ func panelHeading(title, color string, width int, focused bool) string {
 }
 
 type canvasOptions struct {
-	Focus    string
-	Offsets  map[string]int
-	XOffsets map[string]int
-	Hidden   *int
-	Motion   bool
-	Clock    time.Time
+	Focus      string
+	Offsets    map[string]int
+	XOffsets   map[string]int
+	Hidden     *int
+	Motion     bool
+	Clock      time.Time
+	Links      map[string]linkFocus
+	Echo       changeEcho
+	EchoNow    time.Time
+	EchoMotion bool
 }
 
 func spaces(w, h int) []string {
@@ -403,6 +407,7 @@ func renderPanel(p Panel, s *State, w, h int, now time.Time, o canvasOptions) []
 		return renderDAGPanel(p, s, w, h, o, title, color)
 	}
 	data := panelData(p, s, now)
+	keys := panelEchoKeys(p, s)
 	offset := o.Offsets[p.ID]
 	capacity := h - 3
 	if offset > max(0, len(data)-1) {
@@ -416,7 +421,15 @@ func renderPanel(p Panel, s *State, w, h int, now time.Time, o canvasOptions) []
 	}
 	body := []string{panelHeading(title, color, w-2, focused)}
 	for i := offset; i < len(data) && len(body) < h-2; i++ {
-		body = append(body, Clean(data[i], 2000))
+		row := Clean(data[i], 2000)
+		if p.Kind == "session" || p.Kind == "agent" || p.Kind == "agents" || p.Kind == "tasks" {
+			var rowKeys []echoKey
+			if i < len(keys) {
+				rowKeys = keys[i]
+			}
+			row = echoLine(row, rowKeys, o.Echo, o.EchoNow, o.EchoMotion, w-2)
+		}
+		body = append(body, row)
 	}
 	for len(body) < h-2 {
 		body = append(body, "")

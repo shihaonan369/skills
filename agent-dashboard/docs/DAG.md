@@ -157,6 +157,46 @@ snapshot and animation, ignoring in-flight snapshot results until resumed.
 Navigation remains available and hooks continue collecting. Motion preferences,
 clock and focus stay local to each viewer; no layout/schema change is needed.
 
+## Link focus
+
+Link focus is viewer-local inspection of **declared** directed relationships,
+independent of observed lifecycle state. It starts with no selected node. While
+the DAG leaf is focused:
+
+- `]` / `[`: next/previous node in declaration order; from no selection choose
+  the first/last. Selection never pans, scrolls or rearranges the graph; a node
+  outside the viewport is still identified in the heading/details.
+- `c`: clear node selection; keep the chosen scope/sidebar preferences.
+- `f`: cycle direct neighbors → all upstream → all downstream → both.
+  Direct neighbors is the default.
+- `r`: include/exclude return edges from focus traversal (included by default).
+  Exclusion leaves the actual declared edge visible; it never edits the graph.
+- `i`: toggle a 32-cell relationship sidebar **inside this leaf**, not a new
+  caller panel. It shows the binding, literal state and relation/edge summaries.
+  It needs a leaf width of at least **82 cells**; narrower leaves retain the
+  graph viewport and show a width hint. Expand the terminal/leaf or toggle it
+  off. Long details clip; the existing scrollable graph legend retains full
+  endpoint IDs/edge labels. Closing the sidebar does not erase saved offsets.
+
+With a selection, unrelated nodes/edges dim and unrelated packets stop. Related
+routes keep the existing geometry, and colored/text markers distinguish
+`*` selected, `<` upstream/incoming, `>` downstream/outgoing, `=` both and
+`.` unrelated. The edge legend preserves each independent directed declaration.
+No color interpretation alone is required.
+
+Opposite edges, return self-edges and cycles involving return edges are finite
+reachability sets, **not** enumerated execution paths. With returns included,
+a node can be both upstream and downstream; an isolated node selects only itself.
+Unknown/absent bindings remain unknown, unbound nodes remain declared-only.
+Neither reachability nor particles prove actual messages, causal execution,
+critical paths or worker liveness.
+
+These controls do not replace existing arrows, Home or panel focus, and do
+nothing in help/diagnostic pages or non-DAG leaves. On a caller hot-swap the
+focused leaf is retained by ID where possible; a removed selected node clears
+its selection, and a removed/retyped DAG loses its local link preferences.
+No schema, task, permission or collection state is changed.
+
 ## Layout, routing and keyboard
 
 Ranks follow longest paths through ordinary edges, top to bottom. Node order

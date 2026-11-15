@@ -55,6 +55,55 @@ with tempfile.TemporaryDirectory(prefix="agent-dashboard-pty-") as root:
                 assert b"report results" in output, "report-to-parent declaration absent"
         assert b"\x1b[?1049h" in output, "alternate screen was not entered"
         assert re.search(rb"\x1b\[[0-9;]*m", output), "color/style SGR output absent"
+        if "--controls" in sys.argv[2:]:
+            assert layout, "--controls needs a DAG/task composition (fanout recommended)"
+            initial = json.loads(subprocess.check_output([binary, "status", "--session", "DEMO-layout"], env=env))
+            # This fixture starts on the DAG. The graph leaf must be at least
+            # 82 columns wide for its optional in-leaf sidebar.
+            for key, expected in ((b"]", b":neighbors"), (b"f", b":upstream"),
+                                  (b"i", b"DETAILS"), (b"r", b"-return")):
+                start = len(output)
+                os.write(master, key)
+                drain(0.3)
+                assert expected in output[start:], f"DAG control {key!r} did not render {expected!r}"
+            for key in (b"c", b"i"):  # clear selection and close sidebar
+                os.write(master, key)
+                drain(0.15)
+            tasks = list(initial["tasks"].values())
+
+            def plan(status):
+                for task in tasks:
+                    if task["id"] == "2":
+                        task["status"] = status
+                subprocess.run([binary, "plan", "--session", "DEMO-layout", "--json", json.dumps(tasks)],
+                               env=env, check=True, capture_output=True)
+
+            start = len(output)
+            plan("completed")
+            drain(0.9)
+            assert "▸ #2 [completed]".encode() in output[start:], "changed task row did not echo"
+            assert "Δ".encode() in output[start:], "static change summary absent"
+            drain(1.5)
+            start = len(output)
+            os.write(master, b"a")
+            drain(0.2)
+            plan("in_progress")
+            drain(0.9)
+            assert "· #2 [in_progress]".encode() in output[start:], "motion-off lost static change marker"
+            assert "▸".encode() not in output[start:], "motion-off retained transient emphasis"
+            for key in (b"a", b"x", b"p"):  # motion on, clear summary, freeze display
+                os.write(master, key)
+                drain(0.15)
+            plan("pending")
+            drain(0.8)
+            start = len(output)
+            os.write(master, b"p")
+            drain(0.9)
+            assert b"#2 [pending]" in output[start:], "resume failed to adopt new baseline"
+            assert "▸".encode() not in output[start:], "resume replayed accumulated changes"
+            current = json.loads(subprocess.check_output([binary, "status", "--session", "DEMO-layout"], env=env))
+            assert current["hook_count"] == initial["hook_count"], "viewer controls manufactured hooks"
+            assert current["demo"] and current["active"] and not current["finished"]
         # Navigation, focus, independent scroll, pause/help and resume.
         for key in (b"\x1b[C", b"\x1b[D", b"\x1b[6~", b"\x1b[H", b"2", b"3", b"1", b"\t", b"\x1b[B", b"a", b"a", b"p", b"?", b"\x1b", b"p"):
             os.write(master, key)
@@ -77,7 +126,7 @@ with tempfile.TemporaryDirectory(prefix="agent-dashboard-pty-") as root:
         assert restored == original, f"terminal configuration was not restored: before={original!r} after={restored!r}"
         state = json.loads(subprocess.check_output([binary, "status", "--session", "DEMO-layout"], env=env))
         assert state["active"] is True, "viewer quit disabled collection"
-        print("PASS: macOS POSIX PTY · " + ("native DAG, " if layout else "") + "alt screen/color output, keys, resize, clean quit, terminal restored, collection retained")
+        print("PASS: macOS POSIX PTY · " + ("native DAG, " if layout else "") + ("link focus/sidebar + task echo/motion-off/resume, " if "--controls" in sys.argv[2:] else "") + "alt screen/color output, keys, resize, clean quit, terminal restored, collection retained")
     finally:
         if process.poll() is None:
             process.kill()

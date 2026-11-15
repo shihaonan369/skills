@@ -191,7 +191,7 @@ func TestDAGExamplesUnicodeGeometryAndDefensiveRendering(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Layout = l
-	v := Viewer{State: s, Width: 100, Height: 50}
+	v := Viewer{State: s, Width: 100, Height: 50, Links: map[string]linkFocus{"g": {Node: "a", Scope: 3, Inspect: true}}}
 	frame := v.Render(time.Unix(100, 0))
 	for _, want := range []string{"中文 👩‍💻 é", "NEXT", "END", "CROSS-RANK", "RETURN", "[return]", "DATA"} {
 		if !strings.Contains(frame, want) {
@@ -264,6 +264,7 @@ func TestDAGBoundsAndLargeGraphViewport(t *testing.T) {
 	s := newState("bounds", "bounds", true)
 	s.Layout = l
 	assertDAGFrame(t, (Viewer{State: s, Width: 160, Height: 40, XOffsets: map[string]int{"g": 100000}, Offsets: map[string]int{"g": 100000}}).View(), 160, 40)
+	assertDAGFrame(t, (Viewer{State: s, Width: 160, Height: 40, Links: map[string]linkFocus{"g": {Node: "0", Scope: 3, Inspect: true}}, XOffsets: map[string]int{"g": 100000}, Offsets: map[string]int{"g": 100000}}).View(), 160, 40)
 	g.Edges = append(g.Edges, DAGEdge{From: "63", To: "0", Style: "return"})
 	if _, err := ParseLayout(makeLayout(g)); err == nil {
 		t.Fatal("257 edges accepted")
@@ -286,6 +287,13 @@ func FuzzDAGLayoutViewer(f *testing.F) {
 		s := newState("fuzz", "synthetic", true)
 		s.Layout = l
 		assertDAGFrame(t, (Viewer{State: s, Width: 80, Height: 24}).View(), 80, 24)
+		links := map[string]linkFocus{}
+		for _, p := range leaves(l.Root) {
+			if p.Kind == "dag" {
+				links[p.ID] = linkFocus{Node: p.DAG.Nodes[0].ID, Scope: 3, Inspect: true}
+			}
+		}
+		assertDAGFrame(t, (Viewer{State: s, Width: 100, Height: 30, Links: links}).View(), 100, 30)
 	})
 }
 

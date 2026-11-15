@@ -222,3 +222,29 @@ func TestDAGDelegationAndReportHaveIndependentDirections(t *testing.T) {
 		t.Fatal("declaring a report edge fabricated execution or messages")
 	}
 }
+
+func BenchmarkLinkFocusWithSidebar(b *testing.B) {
+	raw, err := os.ReadFile("../../examples/ai-hero/review.demo.layout.json")
+	if err != nil {
+		b.Fatal(err)
+	}
+	layout, err := ParseLayout(raw)
+	if err != nil {
+		b.Fatal(err)
+	}
+	root := b.TempDir()
+	if err := SeedDemo(root, "bench"); err != nil {
+		b.Fatal(err)
+	}
+	s, err := Snapshot(root, "bench")
+	if err != nil {
+		b.Fatal(err)
+	}
+	s.Layout = layout
+	v := Viewer{State: s, Width: 140, Height: 56, Selected: 1, Links: map[string]linkFocus{"graph": {Node: "lead", Scope: 3, Inspect: true}}}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		v.Render(time.Unix(100, 0).Add(time.Duration(i) * 100 * time.Millisecond))
+	}
+}

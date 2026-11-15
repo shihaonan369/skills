@@ -88,11 +88,43 @@ are stripped. Long lines clip by terminal cell width, including CJK/emoji.
 - `Tab`/`Shift-Tab` or `j`/`k`: focus leaf panels in caller tree order.
 - Up/down/PgUp/PgDn: independent vertical scroll per focused buffer.
 - Left/right: horizontal pan in the focused DAG Panel; Home resets both axes.
+- DAG only: `[` / `]` select previous/next declared node; `c` clears selection;
+  `f` cycles relationship scope, `r` toggles return participation, `i` toggles
+  the optional in-leaf relationship sidebar. See [link focus](DAG.md#link-focus).
 - `1`: caller canvas. `2`/`3`: full-screen task/event **diagnostic buffers**;
   these do not replace the caller's layout or impose workflow stages.
 - `a`: toggle DAG flow/spinner/pulse animation (decorative edges, not traffic).
-- `p`: freeze displayed snapshot and animation; collection continues.
+- `p`: freeze displayed snapshot and animation; collection continues. Resume
+  requests a fresh baseline immediately, without replaying paused changes.
+- `x`: clear this viewer's change markers/summary, without changing telemetry.
 - `?`/Esc: help; `q`/Ctrl-C: close viewer only.
+
+## Observed change echoes
+
+Session, agent/agents and task rows reserve a two-cell change-marker gutter.
+A new observed field difference briefly marks only its affected row with `▸`
+and a tint for **1.2 seconds**; after that, `·` remains as a static marker.
+Tool-error rows use an amber echo, never a fabricated agent-failed state.
+DAG state rows echo only changes to the state/count they actually display.
+
+The footer's `Δ N fields` counts changed observed fields, **not events, tool
+calls or throughput**. This latest-batch summary and static markers remain until
+the next real field-change batch, baseline rebuild, or `x`. Unrelated notes,
+layout edits, wall-clock ages and repeated snapshots do not restart the echo.
+
+First load/reopen and resume establish baselines without echoes. Reads issued
+before pause/resume are discarded, including late reads delivered after resume.
+Read failures retain the old display and do not consume a pending baseline.
+Motion-off keeps text/static markers; enabling motion never replays an old echo.
+Help, diagnostic pages and a scrolled focused buffer suppress transient echoes.
+Returning from those views does not replay them. On pause the short emphasis is
+removed while static information remains.
+
+No effect changes focus, scrolls to a changed item, expands a card or writes
+telemetry. A newest-first event buffer at a historical offset keeps its reading
+anchor when matching new events arrive (including actor filters); if bounded
+history evicts that anchor it clamps to the remaining buffer. An offset of zero
+continues following the newest entries. No hidden event IDs are inferred.
 
 Layout and bounded telemetry are local to one opted-in Claude session. There is
 no renderer daemon, network port, workflow subprocess, or remote agent command.

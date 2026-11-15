@@ -557,12 +557,27 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 	if err != nil {
 		return fit([]string{Clean(err.Error(), 200)}, w, h)
 	}
+	f := o.Links[p.ID]
+	found := false
+	for _, n := range g.Nodes {
+		found = found || n.ID == f.Node
+	}
+	if !found {
+		f.Node = ""
+	}
+	relations := declaredRelations(g, f)
 	width, height := w-2, h-3
-	x := min(max(0, o.XOffsets[p.ID]), max(0, geo.width-width))
+	graphWidth, sideWidth := dagViewport(width, f)
+	naturalWidth := focusedGeometryWidth(geo, f)
+	x := min(max(0, o.XOffsets[p.ID]), max(0, naturalWidth-graphWidth))
 	y := min(max(0, o.Offsets[p.ID]), max(0, geo.height-height))
-	c := newDAGCanvas(width, height, x, y)
+	c := newDAGCanvas(graphWidth, height, x, y)
 	// Honest labels scroll with the canvas; the outer session badge remains.
-	c.text(0, 0, "Declared edges · observed states", palette["gray"])
+	caption := "Declared edges · observed states"
+	if f.Node != "" {
+		caption = "Declared [*]selected [<]up [>]down [=]both"
+	}
+	c.text(0, 0, caption, palette["gray"])
 	c.text(0, 1, flowCaption(g, o.Motion), palette["gray"])
 	colors := map[string]string{}
 	for _, n := range g.Nodes {
@@ -571,12 +586,29 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 			colors[n.ID] = palette["blue"]
 		}
 	}
-	for _, route := range geo.routes {
-		points := route.points()
-		edgeColor := effectColor(colors[route.edge.From], 0.55)
-		if o.Focus == p.ID {
-			edgeColor = effectColor(colors[route.edge.From], 0.8)
+	edgeColorFor := func(i int) string {
+		if f.Node != "" {
+			return relationColor(relations.edgeMark(i))
 		}
+		brightness := 0.55
+		if o.Focus == p.ID {
+			brightness = 0.8
+		}
+		return effectColor(colors[geo.routes[i].edge.From], brightness)
+	}
+	// Related routes draw last so unrelated crossings cannot erase emphasis.
+	order := []int{}
+	for _, related := range []bool{false, true} {
+		for i := range geo.routes {
+			if (f.Node != "" && relations.edgeMark(i) != ".") == related {
+				order = append(order, i)
+			}
+		}
+	}
+	for _, index := range order {
+		route := geo.routes[index]
+		points := route.points()
+		edgeColor := edgeColorFor(index)
 		dashed := route.edge.Style == "dashed" || route.edge.Style == "return"
 		for i := 1; i < len(points); i++ {
 			a, b := points[i-1], points[i]
@@ -585,12 +617,23 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 	}
 	if o.Motion {
 		for i, route := range geo.routes {
-			drawFlowPacket(c, route, i, o.Clock, colors[route.edge.From])
+			if f.Node == "" || relations.edgeMark(i) != "." {
+				packetColor := colors[route.edge.From]
+				if f.Node != "" {
+					packetColor = edgeColorFor(i)
+				}
+				drawFlowPacket(c, route, i, o.Clock, packetColor)
+			}
 		}
 	}
-	for _, route := range geo.routes {
+	for _, index := range order {
+		route := geo.routes[index]
 		b := route.target
-		c.text(b.x+b.w/2, b.y-1, "▼", palette["gray"])
+		arrowColor := palette["gray"]
+		if f.Node != "" {
+			arrowColor = edgeColorFor(index)
+		}
+		c.text(b.x+b.w/2, b.y-1, "▼", arrowColor)
 		// Keep the rail direction visible even as particles travel past it.
 		// A report to a higher-ranked parent travels upward, not as a second
 		// copy of the parent's downward delegation animation.
@@ -599,7 +642,10 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 			if route.in < route.out {
 				arrow = "▲"
 			}
-			c.text(route.rail, (route.in+route.out)/2, arrow, colors[route.edge.From])
+			if f.Node == "" {
+				arrowColor = colors[route.edge.From]
+			}
+			c.text(route.rail, (route.in+route.out)/2, arrow, arrowColor)
 		}
 	}
 	for _, n := range g.Nodes {
@@ -609,7 +655,14 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 			nc = palette["blue"]
 		}
 		state, sc, active := dagNodeState(n, s, o.Clock)
-		if active && o.Motion {
+		mark := relations.nodeMark(n.ID, f.Node)
+		if f.Node != "" {
+			nc = relationColor(mark)
+			if mark == "." {
+				sc = nc
+			}
+		}
+		if active && o.Motion && (f.Node == "" || mark != ".") {
 			// A gentle brightness pulse is conditional on observed activity only.
 			phase := float64(o.Clock.UnixMilli()%1800) * 2 * math.Pi / 1800
 			nc = effectColor(nc, 1.08+0.18*math.Sin(phase))
@@ -623,8 +676,15 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 		if label == "" {
 			label = n.ID
 		}
+		if f.Node != "" {
+			label = mark + " " + label
+		}
+		changed, hot := o.Echo.marks(nodeEchoKeys(n, s), o.EchoNow, o.EchoMotion && (f.Node == "" || mark != "."))
+		if hot {
+			sc = palette["purple"]
+		}
 		c.text(b.x+2, b.y+1, clip(label, b.w-4), nc)
-		c.text(b.x+2, b.y+2, clip(state, b.w-4), sc)
+		c.text(b.x+2, b.y+2, clip(echoPrefix(changed, hot)+state, b.w-4), sc)
 		for i, m := range n.Meta {
 			c.text(b.x+2, b.y+3+i, clip(m, b.w-4), palette["gray"])
 		}
@@ -632,10 +692,29 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 	// Preserve every edge label in a scrollable legend, even when an inline
 	// label could not fit. This also makes crossings unambiguous by endpoint ID.
 	for i, e := range g.Edges {
-		c.text(0, geo.legend+i, dagEdgeText(e), palette["gray"])
+		text, tint := dagEdgeText(e), palette["gray"]
+		if f.Node != "" {
+			mark := relations.edgeMark(i)
+			text, tint = "["+mark+"] "+text, relationColor(mark)
+		}
+		c.text(0, geo.legend+i, text, tint)
 	}
-	title += fmt.Sprintf(" [x %d/%d · y %d/%d]", x, max(0, geo.width-width), y, max(0, geo.height-height))
-	body := append([]string{panelHeading(title, color, width, o.Focus == p.ID)}, c.lines()...)
+	if f.Inspect && sideWidth == 0 {
+		title += " [i: needs 82 cols]"
+	}
+	if f.Node != "" {
+		returns := "+return"
+		if f.ExcludeReturns {
+			returns = "-return"
+		}
+		title += " [" + Clean(f.Node, 80) + ":" + f.scopeName() + " " + returns + "]"
+	}
+	title += fmt.Sprintf(" [x %d/%d · y %d/%d]", x, max(0, naturalWidth-graphWidth), y, max(0, geo.height-height))
+	canvas := c.lines()
+	if sideWidth > 0 {
+		canvas = drawLinkDetails(canvas, g, s, f, relations, sideWidth, height)
+	}
+	body := append([]string{panelHeading(title, color, width, o.Focus == p.ID)}, canvas...)
 	styled := lipgloss.NewStyle().Border(panelBorder(o.Focus == p.ID)).BorderForeground(lipgloss.Color(color)).Width(width).Render(strings.Join(body, "\n"))
 	return fit(strings.Split(styled, "\n"), w, h)
 }

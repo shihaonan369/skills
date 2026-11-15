@@ -1,11 +1,46 @@
 # Validation matrix · local 0.1.0
 
-Recorded 2026-11-13 UTC on **macOS / Darwin arm64 (Apple Silicon)**.
+Latest checks recorded **2026-11-14 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
+Historical sections below retain their original scope.
 Local build toolchain: **Go 1.27.4**, archive SHA-256 checked before extraction
 into ignored `.build-tools/go/`; no system-wide toolchain/runtime installed.
 Claude Code: **2.1.312**. This is a local unsigned build, not a published release.
 
-## Parent/child round-trip flow (current local build)
+## Link focus and observed change echoes (current local build)
+
+| Scope | Result / exact boundary |
+| --- | --- |
+| Full suite | `go test -count=1 -race -cover -json ./...`: **51 passing top-level tests + 15 passing subtests**; `go vet ./...` passed. Helper-process parent skip is not counted as a passing test |
+| Coverage | Core **91.3%**; CLI **61.7%**; packager **0% automated statement coverage**, exercised through actual six-target packaging |
+| Link focus | Directional neighbor/transitive sets, independent paired edges, return self-edges and cycles, return exclusion without deletion, isolated/unknown/unbound nodes, keyboard-only selection, no automatic pan, local clear/scope/sidebar controls |
+| Geometry/lifetime | Sidebar at leaf widths ≥82 cells, explicit narrow hint, matching pan limits, fixed cell allocations, CJK/emoji viewport edges, 64-node/256-edge graph; hot-swap preserves focused leaf ID and clears removed node/panel selection |
+| Change semantics | Initial/reopen baselines, exact model/tool/task/status row differences, parallel same-name call identities, tool error vs agent failure, returned/Stop vs completion, multi-field batches, duplicate/non-field snapshots do not extend effects, exact 1.2s deadline and static markers |
+| Pause/history | Epoch-tagged reads reject pre-pause results after resume, fresh baseline read on resume, read errors retain pending baseline, motion-off/help/history retain static information without replay, filtered and bounded event-history reading anchors |
+| Native PTY | **9 macOS PTY runs**: three 160×56 fanout runs with full focus/sidebar/task-echo/motion-off/resume assertions (initial q/Ctrl-C pair plus a packaged-binary Ctrl-C repeat); two default buffer runs with q/Ctrl-C; TDD/Review/no-spec at 140×56; delegation at 120×40. All exercise SIGWINCH resize, clean exit, terminal restoration and collection retention |
+| Fuzz smoke | Extended parser/viewer seam now also draws selected/sidebar views: **5 seconds, 2 workers, 46,387 executions**, no failures. Bounded smoke only, not exhaustive fuzz verification |
+| Render benchmark | Same-host sequential `GOMAXPROCS=1`, 140×56 synthetic review: unselected **6.93 ms/frame**, focus + sidebar **5.86 ms/frame**; prior HEAD **10.13 ms/frame** in that run. Host load varied markedly between samples, so **no speedup/regression conclusion or FPS guarantee** is claimed. Plain-frame rendering only, not terminal IO |
+| Distribution | Six pure-Go target binaries/archives rebuilt and their SHA-256/contents checked; prototypes, local decision tracker and developer test scripts excluded. Non-Mac-arm64 targets are cross-build-only |
+
+This update changes **presentation only**: no hook/schema/storage installation
+change, no new real Claude invocation or user transcript access, no remote deployment,
+publish, push or app settings edit. PTY field updates use explicitly labelled
+synthetic demo tasks through the public `plan` command; they are not real agent
+activity. The historical real-Claude checks below were not rerun.
+
+Viewer keys and exact semantics are in [PANELS.md](PANELS.md) and
+[DAG.md](DAG.md#link-focus). DAG terminal interactions are documented engineering
+defaults following the user's implementation authorization, not claimed as
+separately human-accepted keybindings. The remaining roadmap items are not
+implemented.
+
+A separate Ghostty-owned TTY was opened at 160×50 for a **labelled synthetic**
+interactive preview. A developer-only launcher toggles one demo task every five
+seconds through public CLI calls in an isolated temporary state root; q/close
+stops its updater and removes that root. This verifies launch/TTY ownership,
+not exhaustive GUI-terminal visual or real-Claude acceptance. No preview launcher
+or Python dependency is included in the product archives.
+
+## Parent/child round-trip flow (preceding check)
 
 | Scope | Result / exact boundary |
 | --- | --- |

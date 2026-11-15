@@ -167,3 +167,45 @@ DAG Panel is now integrated via the same `layout` / `tui` commands:
   public publication/snapshot/viewer seam. Full suite: 40 top-level + 13 subtests,
   race/vet; core coverage 88.9%. Exact PTY/package/runtime boundaries are recorded
   in `agent-dashboard/docs/VALIDATION.md`.
+
+## Link focus / change echo follow-up (2026-11-14)
+
+- User selected A (in-place graph dimming) + B (optional relation sidebar), then
+  accepted row-change rules and explicitly said “没，开工”. Implemented those two
+  only; panel zoom, timelines and event waterfall remain unimplemented.
+- Native `link_focus.go` owns viewer-local declared reachability and sidebar;
+  `echo.go` compares observed fields, maps changes to existing rows and anchors
+  scrolled event buffers. Layout/storage/hook schemas are unchanged.
+- Terminal engineering defaults: [/] select without auto-pan; c clear; f scope;
+  r return participation; i in-leaf details (≥82-cell leaf, otherwise width hint).
+  See `docs/DAG.md` for complete semantics, including cycles/unknown states.
+- 1.2s row echo becomes a static marker; x clears local summary. Baselines and
+  duplicates do not replay; pause/resume uses read generations so pre-pause reads
+  cannot overwrite the resumed baseline. Motion-off/history preserve information.
+  See `docs/PANELS.md` for the exact change/history contract.
+- Latest checks: **51 top-level + 15 subtests**, race/vet, core **91.3%**;
+  nine Mac PTY runs, bounded extended fuzz, all six packages and hashes checked.
+  Exact benchmark and cross-build/runtime limits are in `docs/VALIDATION.md`.
+  No fresh actual Claude run, user transcript read, app settings edit or publish.
+- Planning record: `.scratch/dashboard-control-effects/map.md`; execution exception
+  and engineering defaults in its `spec.md`. Terminal-interaction acceptance is
+  still open; defaults are not falsely recorded as individual human decisions.
+- Browser prototypes remain throwaway assets outside the runtime archives.
+  A separate Ghostty demo uses `.scratch/dashboard-control-effects/preview.py`
+  (developer-only), isolated labelled demo state and periodic synthetic task
+  changes; q/close stops it and cleans the temporary root. It does not replace
+  or restart any real session/viewer. A later check found the preview exited and
+  zero temporary preview roots remained; it was not automatically reopened.
+  No commit/push or remote operation during the implementation checks.
+
+## Private repository publication (2026-11-14)
+
+- User explicitly requested push to `https://github.com/shihaonan369/skills`,
+  creation if missing, and private visibility. Authenticated lookup confirmed it
+  did not exist; it was created private and configured as `origin`.
+- Publish validated source and Markdown decision records on `main`. Capture
+  throwaway HTML prototypes, screenshots and benchmark evidence on
+  `prototype/dashboard-control-effects`; decision tickets link that branch.
+  Prototypes are not part of the product branch or runtime archives.
+- Keep native binaries, platform archives, toolchains and transient session state
+  untracked. This source push is not a binary release or remote deployment.

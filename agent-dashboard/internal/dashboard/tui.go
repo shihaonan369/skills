@@ -21,6 +21,10 @@ type Viewer struct {
 	Paused, Help           bool
 	MotionOff              bool
 	MotionTime             time.Time
+	Links                  map[string]linkFocus
+	Echo                   changeEcho
+	baselineOnLoad         bool
+	readEpoch              uint64
 	Error                  string
 }
 type tickMsg time.Time
@@ -35,9 +39,14 @@ func motionTick() tea.Cmd {
 type snapshotMsg struct {
 	state *State
 	err   error
+	at    time.Time
+	epoch uint64
 }
 
-func (v Viewer) load() tea.Msg { s, e := Snapshot(v.Root, v.Session); return snapshotMsg{s, e} }
+func (v Viewer) load() tea.Msg {
+	s, e := Snapshot(v.Root, v.Session)
+	return snapshotMsg{state: s, err: e, at: time.Now(), epoch: v.readEpoch}
+}
 func tick() tea.Cmd {
 	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg { return tickMsg(t) })
 }
@@ -103,7 +112,8 @@ func (v Viewer) dagScrollLimits(id string) (int, int) {
 		if !ok || cw < 8 || ch < 4 {
 			return 0, 0
 		}
-		return max(0, geo.width-(cw-2)), max(0, geo.height-(ch-3))
+		graphWidth, _ := dagViewport(cw-2, v.Links[p.ID])
+		return max(0, focusedGeometryWidth(geo, v.Links[p.ID])-graphWidth), max(0, geo.height-(ch-3))
 	}
 	return unbounded, unbounded
 }
@@ -118,13 +128,33 @@ func (v Viewer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return v, motionTick()
 	case snapshotMsg:
-		if v.Paused {
+		if v.Paused || m.epoch != v.readEpoch {
 			return v, nil
 		}
 		if m.err != nil {
 			v.Error = Clean(m.err.Error(), 180)
-		} else if v.State == nil || m.state.Revision >= v.State.Revision {
+		} else if m.state != nil && (v.State == nil || m.state.Revision >= v.State.Revision) {
+			at := m.at
+			if at.IsZero() {
+				at = time.Now()
+			}
+			baseline := v.baselineOnLoad || v.State == nil || v.State.Session != m.state.Session || v.State.Started != m.state.Started
+			if v.Echo.values == nil && v.State != nil && !baseline {
+				v.Echo.observe(v.State, at, true, true)
+			}
+			v.Echo.observe(m.state, at, baseline, v.quietEcho())
+			id := v.focus()
+			v.anchorEventHistory(m.state)
+			v.reconcileLinks(m.state)
 			v.State = m.state
+			if v.State.Layout != nil {
+				for i, p := range leaves(v.State.Layout.Root) {
+					if p.ID == id {
+						v.Selected = i
+					}
+				}
+			}
+			v.baselineOnLoad = false
 			v.Error = ""
 		}
 	case tickMsg:
@@ -138,11 +168,24 @@ func (v Viewer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return v, tea.Quit
 		case "p":
 			v.Paused = !v.Paused
+			v.readEpoch++ // reject reads issued before either pause boundary
+			v.Echo.until = time.Time{}
 			if v.Paused && v.MotionTime.IsZero() {
 				v.MotionTime = time.Now()
 			}
+			if !v.Paused {
+				v.baselineOnLoad = true
+				v.Echo.changed = nil
+				return v, v.load
+			}
 		case "a":
 			v.MotionOff = !v.MotionOff
+			v.Echo.until = time.Time{} // enabling motion never replays old echoes
+		case "x":
+			v.Echo.changed = nil
+			v.Echo.until = time.Time{}
+		case "[", "]", "c", "f", "r", "i":
+			v.linkKey(m.String())
 		case "?":
 			v.Help = !v.Help
 		case "esc":
@@ -192,6 +235,9 @@ func (v Viewer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				delete(v.XOffsets, v.focus())
 			}
 		}
+	}
+	if v.quietEcho() {
+		v.Echo.until = time.Time{}
 	}
 	return v, nil
 }
@@ -301,7 +347,7 @@ func (v Viewer) Render(now time.Time) string {
 	bodyH := h - 4
 	hidden := 0
 	if v.Help {
-		lines = append(lines, fit([]string{"Caller defines layout; dashboard supplies panels only.", "Tab / Shift-Tab (j/k): focus next/previous panel", "↑↓ / PgUp/PgDn: scroll; ←→: pan DAG; Home: reset", "1: caller canvas; 2/3: task/event diagnostic buffers", "p: pause viewer + animation; a: toggle motion; ?: help", "Flow packets decorate declared edges, not measured traffic.", "q / Ctrl-C: close viewer; agents and hooks continue", "Layouts bind observed IDs; unobserved bindings stay unknown."}, w, bodyH)...)
+		lines = append(lines, fit([]string{"Caller defines layout; dashboard supplies panels only.", "Tab / Shift-Tab (j/k): focus next/previous panel", "↑↓ / PgUp/PgDn: scroll; ←→: pan DAG; Home: reset", "1: caller canvas; 2/3: task/event diagnostic buffers", "DAG [ / ]: select node; c: clear; f: focus scope", "DAG r: include/exclude return; i: relation sidebar", "▸ changed row (1.2s); · static change; x: clear", "p: pause viewer + animation; a: toggle motion; ?: help", "Flow packets decorate declared edges, not measured traffic.", "q / Ctrl-C: close viewer; agents and hooks continue", "Layouts bind observed IDs; unobserved bindings stay unknown."}, w, bodyH)...)
 	} else if v.Error != "" {
 		lines = append(lines, fit([]string{"Snapshot read error · last view retained", v.Error}, w, bodyH)...)
 	} else {
@@ -324,7 +370,7 @@ func (v Viewer) Render(now time.Time) string {
 		if v.Page != 0 {
 			focus = root.ID
 		}
-		lines = append(lines, renderPanel(root, s, w, bodyH, now, canvasOptions{Focus: focus, Offsets: offsets, XOffsets: v.XOffsets, Hidden: &hidden, Motion: !v.MotionOff, Clock: motionNow})...)
+		lines = append(lines, renderPanel(root, s, w, bodyH, now, canvasOptions{Focus: focus, Offsets: offsets, XOffsets: v.XOffsets, Hidden: &hidden, Motion: !v.MotionOff, Clock: motionNow, Links: v.Links, Echo: v.Echo, EchoNow: now, EchoMotion: !v.MotionOff && !v.Paused && !v.quietEcho()})...)
 	}
 	since := "no hooks observed"
 	if s.LastHook > 0 {
@@ -334,7 +380,11 @@ func (v Viewer) Render(now time.Time) string {
 		}
 		since = fmt.Sprintf("last hook %s ago · quiet ≠ offline", age)
 	}
-	lines = append(lines, fmt.Sprintf("%s | %d hooks · %d dropped · %d panels too small", since, s.HookCount, s.Dropped, hidden), "q viewer only · Tab focus · ↑↓ scroll · ←→ DAG · a motion · p pause · ? help")
+	changes := ""
+	if len(v.Echo.changed) > 0 {
+		changes = fmt.Sprintf("Δ %d fields · x clear | ", len(v.Echo.changed))
+	}
+	lines = append(lines, changes+fmt.Sprintf("%s | %d hooks · %d dropped · %d panels too small", since, s.HookCount, s.Dropped, hidden), "q viewer only · Tab focus · ↑↓ scroll · ←→ DAG · [ ] node · f scope · i details · a motion · p pause · ? help")
 	for i := range lines {
 		lines[i] = clip(lines[i], w)
 	}
