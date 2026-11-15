@@ -41,6 +41,7 @@ func build() error {
 		return e
 	}
 	var sums strings.Builder
+	var archives []string
 	for _, target := range targets {
 		parts := strings.Split(target, "/")
 		name := strings.Join(parts, "-")
@@ -80,6 +81,7 @@ func build() error {
 		if e := archive(zipPath, files); e != nil {
 			return e
 		}
+		archives = append(archives, zipPath)
 		for _, p := range []string{path, zipPath} {
 			raw, e := os.ReadFile(p)
 			if e != nil {
@@ -88,7 +90,30 @@ func build() error {
 			fmt.Fprintf(&sums, "%x  %s\n", sha256.Sum256(raw), filepath.ToSlash(p))
 		}
 	}
-	return os.WriteFile("target/SHA256SUMS", []byte(sums.String()), 0644)
+	if e := os.WriteFile("target/SHA256SUMS", []byte(sums.String()), 0644); e != nil {
+		return e
+	}
+	manifest, e := releaseManifest(archives)
+	if e != nil {
+		return e
+	}
+	if e := os.MkdirAll("target/release", 0755); e != nil {
+		return e
+	}
+	return os.WriteFile("target/release/SHA256SUMS", manifest, 0644)
+}
+
+// Release assets are downloaded together, not under our local bin/target tree.
+func releaseManifest(archives []string) ([]byte, error) {
+	var sums strings.Builder
+	for _, path := range archives {
+		raw, e := os.ReadFile(path)
+		if e != nil {
+			return nil, e
+		}
+		fmt.Fprintf(&sums, "%x  %s\n", sha256.Sum256(raw), filepath.Base(path))
+	}
+	return []byte(sums.String()), nil
 }
 func archive(path string, files []string) (err error) {
 	f, e := os.Create(path)

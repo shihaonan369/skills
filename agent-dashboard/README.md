@@ -1,6 +1,6 @@
 # Agent Dashboard · composable TUI skill
 
-**只提供能力，不规定工作流。调用方决定布局。**
+**A presentation capability, not a workflow. The caller owns composition.**
 
 A terminal-independent, Claude Code-first TUI module with self-contained
 executables. It supplies **Panels** (`session`, `agent`, `agents`, `tasks`,
@@ -8,9 +8,23 @@ executables. It supplies **Panels** (`session`, `agent`, `agents`, `tasks`,
 layout, role assignment and workflow; hooks supply last-observed real telemetry.
 There is no screenshot workflow template or hard-coded AI Hero pipeline.
 
+## Download
+
+Get a ready-to-use platform ZIP from
+[GitHub Releases](https://github.com/shihaonan369/skills/releases/latest).
+Packages are available for **macOS, Windows, and Linux**, each in **x64 and ARM64**.
+Each ZIP contains this skill directory, one matching executable, docs, examples,
+and third-party notices. No end-user compilation or extra runtime is required.
+
+Choose the uploaded `agent-dashboard-0.1.0-<os>-<arch>.zip` asset, **not** the
+automatic “Source code” archives. Source checkouts omit `bin/` and `target/`.
+Compare the archive's SHA-256 digest against the release's `SHA256SUMS`.
+Extract to a permanent directory before installing hooks; keep existing unrelated
+skills intact. Platform verification and unsigned-build caveats are below.
+
 ## Local quick start
 
-Binaries live under `bin/<os>-<arch>/agent-dashboard[.exe]`:
+After extracting the platform package, binaries live under `bin/<os>-<arch>/agent-dashboard[.exe]`:
 
 | Host | Binary directory |
 | --- | --- |
@@ -146,8 +160,8 @@ rejected, and explicit return annotations do not execute a loop.
   unknown parentage/models, task response limitations and fail-open semantics.
 - [Validation matrix](docs/VALIDATION.md): distinguishes tested Mac runtime,
   terminal PTY and Claude integration from cross-compilation only.
-- Binaries/archives here are **local unsigned build outputs**, not a published,
-  notarized or Windows-signed release. macOS quarantine/Gatekeeper and Windows
+- Release binaries/archives are **unsigned builds**, not notarized or
+  Windows-signed. macOS quarantine/Gatekeeper and Windows
   SmartScreen/enterprise policy can require user approval. Verify package hashes
   and source. No bypass or signature claim is made.
 - A per-platform zip contains the skill, docs, examples, notices and one matching
@@ -174,7 +188,11 @@ go run ./cmd/package
 
 Packaging cross-builds six pure-Go binaries (`CGO_ENABLED=0`), writes per-platform
 zips and `target/SHA256SUMS`, and collects dependency license notices. Build output
-(`bin/`, `target/`, toolchain) is ignored, not secretly published or pushed. Tests
+(`bin/`, `target/`, toolchain) stays out of Git. Publish the six ZIPs and
+`target/release/SHA256SUMS` as GitHub Release assets; do not substitute automatic
+source archives. `target/SHA256SUMS` is the separate local-build manifest covering
+both binaries and archives, while the release manifest uses download filenames.
+Tests
 cover ingestion, real multi-process writes/readers, isolation, task normalization,
 layout validation/live replacement, arbitrary roles, rendering safety/geometry,
 installer preservation, CLI and fail-open hooks. `tests/pty_smoke.py <binary>` is
