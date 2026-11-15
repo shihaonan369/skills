@@ -60,4 +60,3 @@ open agent-dashboard/prototypes/state-change-echo.prototype.html
 用户已接受该原型推荐规则并授权正式实现；此文件仍只验证状态模型，不是动画或终端验收证据。原生实现的实际检查见 [VALIDATION.md](../docs/VALIDATION.md)。
 
 决策票：[状态变更回响应该强调哪些真实变化](../../.scratch/dashboard-control-effects/issues/02-state-change-echo.md)。
-
