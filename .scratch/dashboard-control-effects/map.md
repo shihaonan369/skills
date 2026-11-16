@@ -16,7 +16,7 @@ Labels: wayfinder:map
 - 沿用现有动画开关与暂停语义；持续动画克制，主要反馈使用短暂强调。具体暂停、恢复及重开查看器边界需在相关票内澄清。
 - 遥测与装饰明确区分：关系来自调用方声明，状态来自真实观测；缺失起止时间、关联关系保持未知。演示必须标注 synthetic/demo。
 - 产品保持可组合、终端无关、Claude Code 优先；不引入默认工作流、不执行或控制 Agent，不新增终端或用户运行时依赖。
-- 每次会话先读 HANDOFF.md、agent-dashboard/docs/PANELS.md，涉及 DAG 时读 agent-dashboard/docs/DAG.md。使用 grilling 与 domain-modeling；原型票另读 prototype。只在出现本地资料不能回答的问题时另建 research 票。
+- 每次会话先读 agent-dashboard/docs/PANELS.md，涉及 DAG 时读 agent-dashboard/docs/DAG.md。使用 grilling 与 domain-modeling；原型票另读 prototype。只在出现本地资料不能回答的问题时另建 research 票。
 - 本地 tracker 约定见 docs/agents/issue-tracker.md。票按 Type 工作；open 且无未解决阻塞的票构成 frontier；先改为 claimed 再工作。一次会话最多解决一张非 research 票。
 - 建图已完成；视觉方向票已由用户反馈收束，终端交互另列后续票。接续时按编号选择 open 且无未解决阻塞的票，或按用户指定；不要把视觉选择视为实现授权。
 - **执行例外（用户“没，开工”）**：正式实现已确认的 DAG 链路聚焦（A 默认、B 侧栏按需）与状态回响。可按现有按键/布局选取可逆、明确记录的工程默认值，不把这些默认值伪称为人类逐项决策；终端交互票保留后续验收。允许本地构建、回归测试与现有六目标打包，不安装配置、不发布或推送。执行细节见 spec.md。
