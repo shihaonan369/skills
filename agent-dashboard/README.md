@@ -198,3 +198,9 @@ layout validation/live replacement, arbitrary roles, rendering safety/geometry,
 installer preservation, CLI and fail-open hooks. `tests/pty_smoke.py <binary>` is
 an optional **developer-only POSIX/Python** PTY test, not a product dependency.
 Cross-builds are not runtime tests on those OS/architectures.
+
+After publishing a release, `python3 tests/release_smoke.py` anonymously downloads
+all six ZIPs, checks their release hashes/package contents, and smoke-runs the
+host-matching executable with isolated synthetic state. This is developer tooling,
+not an end-user Python requirement. It deliberately fails if assets are missing
+or inaccessible to a public user.
