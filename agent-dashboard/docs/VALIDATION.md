@@ -1,12 +1,13 @@
-# Validation matrix · local 0.1.0
+# Validation matrix · 0.1.0
 
 Latest checks recorded **2026-11-15 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
 Historical sections below retain their original scope.
 Local build toolchain: **Go 1.27.4**, archive SHA-256 checked before extraction
 into ignored `.build-tools/go/`; no system-wide toolchain/runtime installed.
-Claude Code: **2.1.312**. This is a local unsigned build, not a published release.
+Claude Code used for historical integration checks: **2.1.312**.
+Distribution builds are unsigned; release assets are not signed/notarized packages.
 
-## Release preparation (2026-11-15)
+## Release packaging and privacy checks (2026-11-15)
 
 The source-only repository had no GitHub Release assets, so a fresh checkout
 could not run the advertised executable. Distribution now explicitly separates
@@ -19,11 +20,26 @@ ZIP basenames, suitable for download-directory verification; the existing local
 basename-only checksums and rejects a missing archive. The test first failed
 before the helper existed, then passed after the fix.
 
-`go test -race -cover ./...` and `go vet ./...` passed after this packaging-only
-change: core coverage **91.3%**, CLI **61.7%**, packager **4.7%**. No new runtime
-behavior or non-Mac runtime verification is claimed. Release publication is gated
-on the requested privacy/history cleanup; existing source/publication history
-must not be described as fully redacted before that is complete.
+`go test -count=1 -race -cover -json ./...` and `go vet ./...` passed after this
+packaging-only change: **52 passing top-level tests + 15 passing subtests**;
+core coverage **91.3%**, CLI **61.7%**, packager **4.7%**. No new runtime behavior
+or non-Mac runtime verification is claimed.
+
+The two public source branches were history-rewritten with approval to replace
+personal author/committer identities, machine-account paths and historical
+operational identifiers. Targeted scans checked every reachable commit on both
+branches; third-party license notices and the public repository namespace remain
+intact. PNG text/EXIF/time metadata was removed while retaining pixel/color
+chunks. This is a targeted privacy check, not an exhaustive security audit or a
+guarantee that external clones/caches have been purged.
+
+`tests/release_smoke.py` exercises anonymous GitHub metadata/asset downloads,
+requires all six platform ZIPs plus `SHA256SUMS`, verifies every hash and archive
+layout, checks packaged Markdown for personal-data patterns, and starts the
+host-matching binary with an isolated labelled demo. Before publication it
+reproduced the original missing-distribution failure with HTTP 404. Its public
+post-publication result is recorded in the Release notes; the source snapshot
+itself does not claim a future download succeeded.
 
 ## Link focus and observed change echoes (preceding implementation check)
 

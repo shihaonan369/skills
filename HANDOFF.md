@@ -67,3 +67,18 @@ Throwaway HTML prototypes/screenshots are archived on
 The separate native demo launcher uses isolated synthetic temporary state and
 cleans it on exit. Historical `agent-dashboard/legacy/rex/` is uninstalled reference
 material; do not reinstall it or modify terminal configuration to use this skill.
+
+## Privacy and publishing
+
+Both published branches have sanitized history. Use a maintainer alias and GitHub
+noreply identity for new commits, and keep examples independent of machine-account
+paths. Preserve third-party notices verbatim and retain the public repository URL
+where needed for downloads. Publish only the intended validated branches/tags;
+local history-recovery bundles/backup refs stay private and are never mirrored.
+Old external clones or caches cannot be assumed erased by a history rewrite.
+
+The distribution tag is `agent-dashboard-v0.1.0`. Upload the six complete skill
+ZIPs and `target/release/SHA256SUMS`, verify asset names/hashes in draft, then
+publish and run `tests/release_smoke.py` against the public URLs. Record the actual
+post-publication result in Release notes. Keep source tag provenance aligned with
+the code/docs used to build packages; never claim cross-builds as runtime tests.
