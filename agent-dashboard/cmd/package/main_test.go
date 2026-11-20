@@ -1,13 +1,73 @@
 package main
 
 import (
+	"archive/zip"
 	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
+
+func TestPlatformPackageIncludesBootstrapWithoutDeveloperRuntime(t *testing.T) {
+	t.Chdir("../..")
+	binary := filepath.Join(t.TempDir(), "synthetic-binary")
+	if err := os.WriteFile(binary, []byte("not executed"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	files, err := packageFiles(binary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{"SKILL.md", "README.md", "bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256", "docs/REX.md", "examples/rex/overview.layout.json", "LICENSES.txt", binary} {
+		if !slices.Contains(files, required) {
+			t.Fatalf("missing bootstrap package file %s", required)
+		}
+	}
+	for _, path := range files {
+		if strings.HasSuffix(path, ".py") || strings.HasPrefix(path, "tests/") || strings.HasPrefix(path, "legacy/") {
+			t.Fatalf("developer runtime or legacy file shipped: %s", path)
+		}
+	}
+	archivePath := filepath.Join(t.TempDir(), "skill.zip")
+	if err := archive(archivePath, files); err != nil {
+		t.Fatal(err)
+	}
+	z, err := zip.OpenReader(archivePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer z.Close()
+	for _, name := range []string{"bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256"} {
+		f, err := z.Open("agent-dashboard/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Close()
+	}
+}
+
+func TestBundledBootstrapPinsCoverPublishedPlatforms(t *testing.T) {
+	raw, err := os.ReadFile("../../bootstrap.sha256")
+	if err != nil {
+		t.Fatal(err)
+	}
+	re := regexp.MustCompile(`(?m)^[0-9a-f]{64}  agent-dashboard-0\.1\.0-((?:darwin|linux|windows)-(?:arm64|amd64))\.zip$`)
+	matches := re.FindAllStringSubmatch(string(raw), -1)
+	seen := map[string]bool{}
+	for _, match := range matches {
+		if seen[match[1]] {
+			t.Fatal("duplicate platform pin", match[1])
+		}
+		seen[match[1]] = true
+	}
+	if len(matches) != 6 || len(strings.Fields(string(raw))) != 12 {
+		t.Fatal("expected exactly six pinned release archives")
+	}
+}
 
 func TestReleaseManifestUsesDownloadFilenames(t *testing.T) {
 	dir := t.TempDir()

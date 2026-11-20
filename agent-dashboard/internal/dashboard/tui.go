@@ -12,6 +12,9 @@ import (
 )
 
 type Viewer struct {
+	// LoadSnapshot is an optional in-memory observation source. Nil retains the
+	// existing private Claude session store; drawing still never reads telemetry.
+	LoadSnapshot           func() (*State, error)
 	Root, Session          string
 	State                  *State
 	Width, Height          int
@@ -44,7 +47,13 @@ type snapshotMsg struct {
 }
 
 func (v Viewer) load() tea.Msg {
-	s, e := Snapshot(v.Root, v.Session)
+	var s *State
+	var e error
+	if v.LoadSnapshot != nil {
+		s, e = v.LoadSnapshot()
+	} else {
+		s, e = Snapshot(v.Root, v.Session)
+	}
 	return snapshotMsg{state: s, err: e, at: time.Now(), epoch: v.readEpoch}
 }
 func tick() tea.Cmd {
@@ -326,6 +335,11 @@ func (v Viewer) Render(now time.Time) string {
 	if s.Demo {
 		label = "DEMO · SYNTHETIC · NOT REAL AGENTS"
 	}
+	buffers := "1 Canvas · 2 Tasks · 3 Events"
+	if s.ProgramReports != nil {
+		label = "REX PROGRAM REPORTS · NOT FULL AGENT TELEMETRY"
+		buffers = "1 Canvas · 2 Programs · 3 Sources"
+	}
 	if !s.Active {
 		label += " · collection OFF"
 	}
@@ -336,7 +350,7 @@ func (v Viewer) Render(now time.Time) string {
 	if s.Layout != nil {
 		name = s.Layout.Name
 	}
-	lines := []string{shade("#F5C2A1", "AGENT DASHBOARD · "+Clean(name, 160)), shade("#A6E3A1", label+" | 1 Canvas · 2 Tasks · 3 Events")}
+	lines := []string{shade("#F5C2A1", "AGENT DASHBOARD · "+Clean(name, 160)), shade("#A6E3A1", label+" | "+buffers)}
 	motionNow := now
 	if !v.MotionTime.IsZero() {
 		motionNow = v.MotionTime
@@ -347,17 +361,31 @@ func (v Viewer) Render(now time.Time) string {
 	bodyH := h - 4
 	hidden := 0
 	if v.Help {
-		lines = append(lines, fit([]string{"Caller defines layout; dashboard supplies panels only.", "Tab / Shift-Tab (j/k): focus next/previous panel", "↑↓ / PgUp/PgDn: scroll; ←→: pan DAG; Home: reset", "1: caller canvas; 2/3: task/event diagnostic buffers", "DAG [ / ]: select node; c: clear; f: focus scope", "DAG r: include/exclude return; i: relation sidebar", "▸ changed row (1.2s); · static change; x: clear", "p: pause viewer + animation; a: toggle motion; ?: help", "Flow packets decorate declared edges, not measured traffic.", "q / Ctrl-C: close viewer; agents and hooks continue", "Layouts bind observed IDs; unobserved bindings stay unknown."}, w, bodyH)...)
+		bufferHelp := "1: caller canvas; 2/3: task/event diagnostic buffers"
+		closeHelp := "q / Ctrl-C: close viewer; agents and hooks continue"
+		if s.ProgramReports != nil {
+			bufferHelp = "1: caller canvas; 2/3: program/source inspectors"
+			closeHelp = "q / Ctrl-C: stop subscriptions; observed programs continue"
+		}
+		lines = append(lines, fit([]string{"Caller defines layout; dashboard supplies panels only.", "Tab / Shift-Tab (j/k): focus next/previous panel", "↑↓ / PgUp/PgDn: scroll; ←→: pan DAG; Home: reset", bufferHelp, "DAG [ / ]: select node; c: clear; f: focus scope", "DAG r: include/exclude return; i: relation sidebar", "▸ changed row (1.2s); · static change; x: clear", "p: pause viewer + animation; a: toggle motion; ?: help", "Flow packets decorate declared edges, not measured traffic.", closeHelp, "Layouts bind observed IDs; unobserved bindings stay unknown."}, w, bodyH)...)
 	} else if v.Error != "" {
 		lines = append(lines, fit([]string{"Snapshot read error · last view retained", v.Error}, w, bodyH)...)
 	} else {
 		var root Panel
 		if v.Page == 1 {
 			root = Panel{ID: "task-buffer", Kind: "tasks", Title: "Task diagnostic buffer"}
+			if s.ProgramReports != nil {
+				root = Panel{ID: "program-buffer", Kind: "programs", Title: "Reported programs"}
+			}
 		} else if v.Page == 2 {
 			root = Panel{ID: "event-buffer", Kind: "events", Title: "Event diagnostic buffer"}
+			if s.ProgramReports != nil {
+				root = Panel{ID: "source-buffer", Kind: "sources", Title: "Observation sources"}
+			}
 		} else if s.Layout != nil {
 			root = s.Layout.Root
+		} else if s.ProgramReports != nil {
+			root = programInspector(s.ProgramReports).Root
 		} else {
 			// An inspector is not an implicit workflow or a fallback orchestration graph.
 			root = Panel{Kind: "column", Children: []Panel{{ID: "unconfigured", Kind: "text", Size: 5, Title: "Layout not supplied", Text: []string{"Caller chooses panels, positions and data bindings.", "Set a layout using: layout --session ID --json @file"}}, {ID: "session-inspector", Kind: "session", Title: "Session inspector"}}}
@@ -382,9 +410,17 @@ func (v Viewer) Render(now time.Time) string {
 	}
 	changes := ""
 	if len(v.Echo.changed) > 0 {
-		changes = fmt.Sprintf("Δ %d fields · x clear | ", len(v.Echo.changed))
+		unit := "fields"
+		if s.ProgramReports != nil {
+			unit = "observations"
+		}
+		changes = fmt.Sprintf("Δ %d %s · x clear | ", len(v.Echo.changed), unit)
 	}
-	lines = append(lines, changes+fmt.Sprintf("%s | %d hooks · %d dropped · %d panels too small", since, s.HookCount, s.Dropped, hidden), "q viewer only · Tab focus · ↑↓ scroll · ←→ DAG · [ ] node · f scope · i details · a motion · p pause · ? help")
+	footer := fmt.Sprintf("%s | %d hooks · %d dropped · %d panels too small", since, s.HookCount, s.Dropped, hidden)
+	if s.ProgramReports != nil {
+		footer = fmt.Sprintf("Read-only Rex sources · report age is not disconnection | %d panels too small", hidden)
+	}
+	lines = append(lines, changes+footer, "q viewer only · Tab focus · ↑↓ scroll · ←→ DAG · [ ] node · f scope · i details · a motion · p pause · ? help")
 	for i := range lines {
 		lines[i] = clip(lines[i], w)
 	}

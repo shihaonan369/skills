@@ -13,6 +13,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"agent-dashboard/internal/buildinfo"
 )
 
 func main() {
@@ -65,17 +67,9 @@ func build() error {
 			return e
 		}
 		fmt.Printf("%s · %d bytes\n", name, info.Size())
-		zipPath := filepath.Join("target", "agent-dashboard-0.1.0-"+name+".zip")
-		files := []string{"SKILL.md", "README.md", "docs/ARCHITECTURE.md", "docs/VALIDATION.md", "docs/PANELS.md", "docs/DAG.md", path, "LICENSES.txt"}
-		if e := filepath.WalkDir("examples", func(p string, entry os.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if !entry.IsDir() && (filepath.Ext(p) == ".json" || filepath.Ext(p) == ".md") {
-				files = append(files, p)
-			}
-			return nil
-		}); e != nil {
+		zipPath := filepath.Join("target", "agent-dashboard-"+buildinfo.Version+"-"+name+".zip")
+		files, e := packageFiles(path)
+		if e != nil {
 			return e
 		}
 		if e := archive(zipPath, files); e != nil {
@@ -101,6 +95,20 @@ func build() error {
 		return e
 	}
 	return os.WriteFile("target/release/SHA256SUMS", manifest, 0644)
+}
+
+func packageFiles(binary string) ([]string, error) {
+	files := []string{"SKILL.md", "README.md", "bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256", "docs/ARCHITECTURE.md", "docs/VALIDATION.md", "docs/PANELS.md", "docs/DAG.md", "docs/REX.md", binary, "LICENSES.txt"}
+	err := filepath.WalkDir("examples", func(p string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() && (filepath.Ext(p) == ".json" || filepath.Ext(p) == ".md") {
+			files = append(files, p)
+		}
+		return nil
+	})
+	return files, err
 }
 
 // Release assets are downloaded together, not under our local bin/target tree.

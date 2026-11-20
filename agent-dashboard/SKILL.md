@@ -8,36 +8,79 @@ argument-hint: "[caller layout / task context]"
 
 Keep the caller's existing workflow and skills. This skill supplies TUI panels,
 not a workflow, orchestrator, agent router, plan template or completion policy.
-The screenshot is visual inspiration only. AI Hero is an optional example, not a
-default or required dependency. Do not spawn agents just to populate a panel.
+AI Hero is an optional example, not a default or required dependency. Do not spawn
+agents just to populate a panel.
 
-## Locate the executable and check readiness
+## Ensure readiness (agent-managed)
 
-The skill directory is `${CLAUDE_SKILL_DIR}`. Select its bundled binary using the
-**host running Claude**, not a remote viewer's OS:
+Resolve the absolute skill directory from this loaded file. Claude can supply
+`${CLAUDE_SKILL_DIR}`; other harnesses, including Pi, do not necessarily expand
+it. Substitute the real directory in the examples below. Run bootstrap on the
+**host running this agent**, not on a host selected only for observation.
+Perform routine setup yourself rather than asking for downloads or shell work.
 
-| Host | Relative executable |
-| --- | --- |
-| macOS arm64 / x86-64 | `bin/darwin-arm64/agent-dashboard` / `bin/darwin-amd64/agent-dashboard` |
-| Linux arm64 / x86-64 | `bin/linux-arm64/agent-dashboard` / `bin/linux-amd64/agent-dashboard` |
-| Native Windows arm64 / x64 | `bin/windows-arm64/agent-dashboard.exe` / `bin/windows-amd64/agent-dashboard.exe` |
+macOS/Linux (including WSL):
 
-In commands below, replace `<D>` with that quoted absolute executable path;
-PowerShell uses `& '<path>'`. Run `<D> doctor`. If the binary is absent, report a
-missing platform package and direct the user to the ready-to-use ZIPs in
-[GitHub Releases](https://github.com/shihaonan369/skills/releases/latest), as
-explained in `README.md` → Download. A source checkout alone is not a runtime
-package; do not install an end-user runtime or revive the legacy implementation. If hooks are not configured, explain the one-time
-`<D> install --skill-dir "${CLAUDE_SKILL_DIR}"` step, get permission before changing
-settings, and request a fresh Claude session after installation. See `README.md`
-for Windows linking/permissions and platform verification constraints.
+```sh
+sh "${CLAUDE_SKILL_DIR}/bootstrap.sh"
+```
+
+Native Windows, in PowerShell:
+
+```powershell
+& (Join-Path '${CLAUDE_SKILL_DIR}' 'bootstrap.ps1')
+```
+
+On success, the sole stdout line is the absolute executable path. Use it as
+quoted `<D>` below; PowerShell uses `& '<path>'`. The bootstrap reuses an existing
+binary without network access. If absent, it selects the native platform,
+downloads pinned release 0.1.0, verifies against bundled `bootstrap.sha256` and
+the published manifest, and atomically installs only the binary under `bin/`.
+It never edits hooks, settings, skill instructions, or layouts. No end-user
+runtime/package installation or build toolchain is needed. See
+`README.md` → First use for available system utilities and failure boundaries.
+
+A nonzero bootstrap exit is a blocker: report the concrete network, permissions,
+policy, utility, or platform failure and stop setup. Do not hand back manual
+download steps, invent a binary path, bypass TLS/hash checks or execution policy,
+or fall back to the legacy implementation. The agent may retry transient network
+failures; integrity failures require investigation, not a different download URL.
+
+## Choose the observation boundary
+
+Run `<D> capabilities` for optional feature discovery. Published 0.1.0 binaries
+predate this command; an unknown command leaves normal Claude mode usable, but
+is a blocker for unshipped Rex features. Source builds are 0.2.0-dev; bootstrap
+pins intentionally remain at immutable 0.1.0 until a separately authorized
+release. Preserve integrity pins and report this distribution boundary honestly.
+
+- **Claude lifecycle/tools/tasks:** follow the hook readiness and attachment
+  steps below. A Rex terminal is optional, never a collector prerequisite.
+- **Rex basic program status, selected remote hosts, or Pi status in Rex:** read
+  and follow `docs/REX.md` in full. Require its capability gates, resolve only
+  the requested hosts, save private UTF-8 source/layout files, then open and
+  verify the viewer yourself. This branch skips Claude hook setup and session
+  variables. It observes real program reports, not full Pi agent telemetry.
+- **Unsupported telemetry:** keep missing lifecycle/tools/tasks unknown and
+  explain the actual boundary. A program report is not a substitute for a
+  requested full agent adapter without agreement on the narrower scope.
+
+### Claude hook readiness
+
+Run `<D> doctor`. If hooks are missing, explain that Claude settings must change,
+get permission, then **run** `<D> install --skill-dir "${CLAUDE_SKILL_DIR}"`
+yourself and rerun doctor. Request a fresh Claude session afterward; do not claim
+that the current session has loaded hooks. If approval is denied, leave settings
+untouched and report live lifecycle telemetry as unavailable. Windows
+link/permission constraints are in `README.md`.
 
 ## Attach and publish the caller's composition
 
 1. Run `<D> start --session "${CLAUDE_SESSION_ID}" --title "<actual work title>"`.
    Use the substituted **Claude session ID**, not a terminal ID or guessed UUID.
-   The result prints the command for a second terminal on this host. Show it to
-   the user; do not claim a window opened without an actual terminal operation.
+   The result prints a terminal-independent viewer command. After composing the
+   layout, open it through an available authorized presentation adapter; verify
+   the actual returned pane/window before claiming it opened.
 2. Read `docs/PANELS.md` to construct the caller's layout. Accept an existing
    layout file, or compose panels according to the **calling skill's instructions
    and current real work**. The caller chooses rectangles, buffers, sizes, data
@@ -47,6 +90,11 @@ for Windows linking/permissions and platform verification constraints.
 3. Store any live composition in a private working file outside git, then run
    `<D> layout --session "${CLAUDE_SESSION_ID}" --json @<absolute-layout-file>`.
    It atomically updates the canvas. The caller can replace it at any time.
+   If capabilities include `rex-local-open-v1`, run `<D> open --session
+   "${CLAUDE_SESSION_ID}"`: a verified Rex context creates/reuses the right pane
+   without taking focus; `mode: terminal` means no pane opened and returns the
+   normal viewer arguments. Read `docs/REX.md` for launch failures/recovery. Older
+   binaries use the printed viewer command through existing terminal controls.
    For an AI Hero example **only when relevant**, read `examples/ai-hero/README.md`.
    Its live templates combine native DAG/detail Panels and contain binding
    placeholders; `.demo.layout.json` files are separate synthetic fixtures.

@@ -13,6 +13,13 @@ After `start --session ID`, send one JSON object with `layout --session ID --jso
 picks it up at its next refresh. A rejected layout leaves the previous one intact.
 Use a private working file for live IDs or sensitive text; keep it outside git.
 
+Optional Rex source builds use `rex-watch --sources @private.json --layout
+@layout.json` instead of a Claude session store. Read [REX.md](REX.md) for the
+capability gate and explicit source opt-in. That viewer reads configuration at
+startup; changed source/layout content is a different launch, not a hot update
+to another caller's running viewer. Normal Claude `layout` hot updates are
+unchanged.
+
 ```json
 {
   "version": 1,
@@ -71,11 +78,23 @@ and a bold heading; unfocused Panels use thin rounded borders with the same geom
 | `events` | Newest-first bounded event buffer | `actors`: actor ID filter; omitted = all |
 | `text` | Caller-authored operational text, explicitly labelled **not hook telemetry** | `text`: array of lines |
 | `dag` | Caller-declared directed graph; node states bind observed actor/task IDs | required `dag`: version-1 graph object; see [DAG contract](DAG.md) |
+| `programs` | Optional Rex program reports, not agent/task lifecycle | `sources`: exact source aliases; `program_ids`: full source-qualified keys from `rex-watch --status`; `compact: true` for one source-prefixed row/report |
+| `sources` | Optional Rex host/instance identity, transport health, last-known/error information, report/unreported/excluded-pane counts | `sources`: exact source aliases |
 
 An ID placeholder is **not** an agent. Giving a panel the title “reviewer” never
 creates, classifies or assigns that role. Titles are presentation; actor bindings
 must use real IDs from `status` or native results. Ownership names are not silently
 mapped to IDs. Caller-authored text is never parsed as tool/agent status.
+
+Rex panels require `rex-observer-v1`; stable 0.1.0 rejects these new kinds. A
+program key is `rex:` plus 64 lowercase hexadecimal digits, qualified by full
+host/session/block/record identity. Record roots may have an empty ID; shortened
+block IDs are display only. Source and program filters intersect; missing keys
+stay unknown. Source failure preserves reported program state with a last-known
+label. Compact `?` means progress was not reported, not zero or idle. Use the
+program diagnostic buffer for full message/title, report age and known progress.
+A Claude lifecycle panel in a program-only viewer explicitly has no Claude
+session bound. These modes are not a merged/fabricated agent/task collection.
 
 Limits: one object ≤256 KiB, ≤64 total nodes, depth ≤8, text ≤128 lines per leaf,
 ≤2000 input bytes/line (display/storage sanitize to ≤400 runes), title ≤160 bytes,
@@ -91,7 +110,8 @@ are stripped. Long lines clip by terminal cell width, including CJK/emoji.
 - DAG only: `[` / `]` select previous/next declared node; `c` clears selection;
   `f` cycles relationship scope, `r` toggles return participation, `i` toggles
   the optional in-leaf relationship sidebar. See [link focus](DAG.md#link-focus).
-- `1`: caller canvas. `2`/`3`: full-screen task/event **diagnostic buffers**;
+- `1`: caller canvas. `2`/`3`: full-screen task/event **diagnostic buffers**
+  (program/source diagnostics in Rex observation mode);
   these do not replace the caller's layout or impose workflow stages.
 - `a`: toggle DAG flow/spinner/pulse animation (decorative edges, not traffic).
 - `p`: freeze displayed snapshot and animation; collection continues. Resume
@@ -126,7 +146,12 @@ anchor when matching new events arrive (including actor filters); if bounded
 history evicts that anchor it clamps to the remaining buffer. An offset of zero
 continues following the newest entries. No hidden event IDs are inferred.
 
-Layout and bounded telemetry are local to one opted-in Claude session. There is
-no renderer daemon, network port, workflow subprocess, or remote agent command.
-The viewer can be reopened from another terminal on the **same host/data root**.
-Several viewers can observe the same persisted layout independently.
+Claude layout and bounded lifecycle telemetry are local to one opted-in session.
+Its viewer can be reopened from another terminal on the **same host/data root**;
+several viewers observe the persisted layout independently. There is no renderer
+daemon, network port or workflow process. Optional Rex mode keeps observations
+in memory and owns cancellable local CLI subscriptions to explicitly selected
+sources; closing it stops those subscriptions, not the observed programs. Its
+change echoes compare whole report/source-health observations, never report ages
+or contact clocks; the footer labels those units `observations`, not events or
+throughput. See [REX.md](REX.md) for its separate privacy/lifecycle boundary.

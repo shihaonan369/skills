@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 
+	"agent-dashboard/internal/buildinfo"
 	d "agent-dashboard/internal/dashboard"
 )
 
@@ -21,7 +22,7 @@ func main() {
 	}
 }
 func help(w io.Writer) {
-	fmt.Fprintln(w, `Agent Dashboard · local observer for Claude Code
+	fmt.Fprintln(w, `Agent Dashboard · composable local observer
 Commands:
   install / uninstall   --skill-dir PATH [--settings PATH] [--skills-dir PATH]
   doctor                [--settings PATH] (configuration only; not hook liveness)
@@ -33,12 +34,17 @@ Commands:
   deactivate            --session ID (collection off, keeps snapshot)
   status                --session ID (JSON)
   tui                   --session ID [--plain] [--width 100 --height 32]
+  open                  --session ID | --sources @file [--layout @file]
+                        [--presentation auto|rex|terminal]
+  rex-sources           [--current=false] [--host LABEL (repeat)]
+  rex-watch             --sources @file [--layout @file] [--plain | --status]
+  capabilities          (machine-readable optional feature discovery)
   demo                  [--json @layout.json] (synthetic isolated preview)
   hook                  (internal, JSON stdin; always fail-open)
   version
 Environment: AGENT_DASHBOARD_HOME overrides the private local state directory.
 Viewer: q/Ctrl-C close only the viewer; 1/2/3 buffers, Tab panels, arrows scroll.
-No runtime, daemon, network listener or terminal split integration required.`)
+No extra runtime, daemon or network listener required. Rex is optional.`)
 }
 func locateSkill(exe string) string {
 	p := filepath.Dir(exe)
@@ -73,12 +79,19 @@ func run(args []string, in io.Reader, out io.Writer) error {
 		return nil
 	}
 	if command == "version" {
-		fmt.Fprintf(out, "agent-dashboard 0.1.0 · %s/%s\n", runtime.GOOS, runtime.GOARCH)
+		fmt.Fprintf(out, "agent-dashboard %s · %s/%s\n", buildinfo.Version, runtime.GOOS, runtime.GOARCH)
 		return nil
+	}
+	if command == "capabilities" {
+		return json.NewEncoder(out).Encode(map[string]any{"version": buildinfo.Version, "features": []string{"rex-observer-v1", "rex-local-open-v1"}})
+	}
+	if command == "rex-sources" || command == "rex-watch" || command == "open" {
+		return runRex(command, args[1:], out)
 	}
 	f := flag.NewFlagSet(command, flag.ContinueOnError)
 	f.SetOutput(out)
 	session := f.String("session", "", "concrete Claude session ID")
+	stateDir := f.String("state-dir", "", "explicit private state directory (optional)")
 	title := f.String("title", "Claude task", "short issue title")
 	text := f.String("text", "", "operational note")
 	summary := f.String("summary", "Work explicitly marked finished", "completion summary")
@@ -114,6 +127,12 @@ func run(args []string, in io.Reader, out io.Writer) error {
 	root, e := d.Root()
 	if e != nil {
 		return e
+	}
+	if *stateDir != "" {
+		root, e = filepath.Abs(*stateDir)
+		if e != nil {
+			return e
+		}
 	}
 	switch command {
 	case "install", "uninstall":

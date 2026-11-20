@@ -32,6 +32,9 @@ type Panel struct {
 	Actor      string   `json:"actor,omitempty"`
 	Actors     []string `json:"actors,omitempty"`
 	TaskIDs    []string `json:"task_ids,omitempty"`
+	Sources    []string `json:"sources,omitempty"`
+	ProgramIDs []string `json:"program_ids,omitempty"`
+	Compact    bool     `json:"compact,omitempty"`
 	Text       []string `json:"text,omitempty"`
 	DAG        *DAG     `json:"dag,omitempty"`
 }
@@ -80,6 +83,28 @@ func ParseLayout(raw []byte) (*Layout, error) {
 		if len(p.Title) > 160 || len(p.Actor) > 120 || len(p.Actors) > 256 || len(p.TaskIDs) > 1024 || len(p.Text) > 128 {
 			return errors.New("panel field exceeds limit")
 		}
+		if p.Compact && p.Kind != "programs" {
+			return errors.New("compact belongs to programs panels")
+		}
+		if len(p.Sources) > 16 || len(p.ProgramIDs) > 4096 {
+			return errors.New("program/source filter exceeds limit")
+		}
+		for _, id := range p.Sources {
+			if len(id) == 0 || len(id) > 80 || Clean(id, 80) != id {
+				return errors.New("source filters must be printable names")
+			}
+		}
+		for _, id := range p.ProgramIDs {
+			if len(id) != 68 || !strings.HasPrefix(id, "rex:") || strings.IndexFunc(id[4:], func(r rune) bool { return !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f') }) >= 0 {
+				return errors.New("program_ids require source-qualified Rex keys from rex-watch --status")
+			}
+		}
+		if len(p.Sources) > 0 && p.Kind != "programs" && p.Kind != "sources" {
+			return errors.New("sources filter belongs to programs/sources")
+		}
+		if len(p.ProgramIDs) > 0 && p.Kind != "programs" {
+			return errors.New("program_ids filter belongs to programs")
+		}
 		p.Title = Clean(p.Title, 160)
 		p.Actor = Clean(p.Actor, 120)
 		for i, v := range p.Actors {
@@ -116,7 +141,7 @@ func ParseLayout(raw []byte) (*Layout, error) {
 					return e
 				}
 			}
-		case "session", "agent", "agents", "tasks", "events", "text", "dag":
+		case "session", "agent", "agents", "tasks", "events", "text", "dag", "programs", "sources":
 			if p.ID == "" {
 				return errors.New("each leaf panel needs an ID")
 			}
@@ -190,7 +215,14 @@ func contains(filter []string, id string) bool {
 }
 func panelData(p Panel, s *State, now time.Time) []string {
 	switch p.Kind {
+	case "programs":
+		return programData(p, s, now)
+	case "sources":
+		return sourceData(p, s, now)
 	case "session":
+		if s.Agents["lead"] == nil {
+			return []string{"No Claude lifecycle session bound.", "Program reports do not provide task/tool lifecycle telemetry."}
+		}
 		completion := "not marked finished"
 		if s.Finished {
 			completion = "explicitly finished"

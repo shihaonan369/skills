@@ -15,6 +15,8 @@ import (
 	"unicode"
 
 	"context"
+
+	rx "agent-dashboard/internal/rexwatch"
 	"github.com/gofrs/flock"
 )
 
@@ -57,23 +59,24 @@ type Event struct {
 	Text  string `json:"text"`
 }
 type State struct {
-	Layout    *Layout           `json:"layout,omitempty"`
-	Revision  uint64            `json:"revision"`
-	Version   int               `json:"version"`
-	Session   string            `json:"session"`
-	Title     string            `json:"title"`
-	Demo      bool              `json:"demo"`
-	Active    bool              `json:"active"`
-	Finished  bool              `json:"finished"`
-	Started   int64             `json:"started"`
-	LastHook  int64             `json:"last_hook"`
-	HookCount int               `json:"hook_count"`
-	Dropped   int               `json:"dropped"`
-	Agents    map[string]*Agent `json:"agents"`
-	Tasks     map[string]Task   `json:"tasks"`
-	Tools     map[string]Tool   `json:"tools"`
-	Events    []Event           `json:"events"`
-	Seen      []string          `json:"seen"`
+	ProgramReports *rx.Snapshot      `json:"program_reports,omitempty"`
+	Layout         *Layout           `json:"layout,omitempty"`
+	Revision       uint64            `json:"revision"`
+	Version        int               `json:"version"`
+	Session        string            `json:"session"`
+	Title          string            `json:"title"`
+	Demo           bool              `json:"demo"`
+	Active         bool              `json:"active"`
+	Finished       bool              `json:"finished"`
+	Started        int64             `json:"started"`
+	LastHook       int64             `json:"last_hook"`
+	HookCount      int               `json:"hook_count"`
+	Dropped        int               `json:"dropped"`
+	Agents         map[string]*Agent `json:"agents"`
+	Tasks          map[string]Task   `json:"tasks"`
+	Tools          map[string]Tool   `json:"tools"`
+	Events         []Event           `json:"events"`
+	Seen           []string          `json:"seen"`
 }
 
 // Clean strips terminal controls, bidi overrides and line breaks before storage or display.

@@ -8,7 +8,7 @@ implementation, examples, and tests.
 
 | Skill | Overview |
 | --- | --- |
-| [Agent Dashboard](agent-dashboard/README.md) | A composable terminal dashboard for Claude Code. Presents observed session, agent, task, and event data alongside caller-declared graphs; the caller owns the layout and workflow. |
+| [Agent Dashboard](agent-dashboard/README.md) | A composable terminal dashboard for Claude Code. Presents observed lifecycle data and caller-declared graphs, with optional Rex program-status adapters; the caller owns layout and workflow. |
 
 ## Using a skill
 

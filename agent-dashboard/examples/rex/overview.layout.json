@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "name": "Selected program sources",
+  "root": {
+    "id": "program-reports",
+    "kind": "programs",
+    "title": "Program reports",
+    "compact": true,
+    "color": "mint"
+  }
+}

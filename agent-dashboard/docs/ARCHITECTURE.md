@@ -6,6 +6,8 @@
    no AI Hero or screenshot workflow assumptions. AI Hero is an example only.
 2. **Observation**: synchronous short-lived Claude settings hooks normalize real
    lifecycle/tool events into a bounded local snapshot after per-session opt-in.
+   Optional Rex observation is a separate, in-memory program-report source; it
+   does not create lifecycle actors/tasks or require Claude hooks.
 3. **Presentation**: a caller-owned split tree binds Panel buffers to that
    snapshot. Bubble Tea + Lip Gloss provide terminal IO, color, resize, Unicode
    cell sizing and Windows support. The pure-Go executable has no runtime install.
@@ -89,6 +91,72 @@ that worker. StopFailure records an API error without completing the issue.
 - `finish` is an optional **explicit caller declaration**. The tool does not define
   prerequisites for it or decide a workflow's completion. A new lead tool/turn
   clears the declaration; the completion command's own PostToolUse does not.
+
+## First-use bootstrap boundary
+
+The skill agent runs `bootstrap.sh` (macOS/Linux/WSL) or `bootstrap.ps1` (native
+Windows) before readiness checks. A working existing executable is reused
+without network access or automatic update. Missing executables are acquired
+from the fixed `agent-dashboard-v0.1.0` release in `shihaonan369/skills`; URLs and
+version are not caller-configurable. Both the remote manifest's selected hash
+and the actual archive must match the reviewed per-platform pin bundled in
+`bootstrap.sha256`. This protects against later replacement of release assets
+and checksums, but is not code signing, notarization, or a guarantee against
+compromise of the skill source itself.
+
+The helper checks supported OS/native architecture and downloads with normal
+TLS certificate verification. Download sizes and extracted binary size are
+bounded. After verification, only the exact, unique expected executable member
+is streamed to a same-filesystem staging file; archive paths are never unpacked
+into source directories. A lock serializes first use. Publication is atomic and
+no-replace (POSIX hard link, Windows .NET File.Move). The helpers do not execute
+the payload and leave existing binaries, layouts, documentation, hooks, and
+settings untouched. Temporary downloads are removed on handled exits; SIGKILL
+can leave a POSIX lock that requires investigation, not automatic stale-lock
+heuristics. Windows sharing locks release on process exit; the empty lock file
+is intentionally retained to avoid unlink/reacquisition races.
+
+The agent then runs `doctor`, obtains approval before running `install`, and
+requests a fresh Claude session after hook changes. Automatic acquisition is
+not permission to change application settings or override host execution policy.
+No runtime/package manager is installed: POSIX uses existing HTTPS, SHA-256, and
+ZIP utilities, while native Windows uses PowerShell/.NET. Missing tools,
+unsupported platforms, read-only locations, and network/policy failures are
+explicit blockers. First-use network access is separate from the collector,
+which remains local. This does not implement Pi session variables or hooks;
+source-only Rex program observation has a separate capability boundary below.
+
+## Optional Rex observation and presentation
+
+The full source/version gates, agent procedures and source semantics are in
+[REX.md](REX.md). The stable bootstrap remains pinned to 0.1.0; these optional
+capabilities currently belong to source/development builds, not those assets.
+
+`internal/rexwatch` hides official CLI transport, an embedded local Lua observer,
+source-qualified identity, full-pane snapshot replacement and independent source
+reconnects behind `Monitor.Snapshot` / `Close`. Native process IO is bounded and
+cancellable; no private socket protocol or new server is implemented. Lua event
+handlers invalidate/re-read a pane rather than applying older queued deltas.
+Initial/reconnect baselines are staged until fully validated. Source failures
+retain old reports and their old instance label, explicitly last-known, until a
+fresh baseline commits. The CLI lacks a documented exposed baseline watermark;
+60-second reconciliation bounds startup gaps rather than claiming losslessness.
+
+`dashboard.ProgramState` binds the in-memory observation to caller-owned
+`programs`/`sources` panels without manufacturing a Claude session, lead, task,
+or completion. Viewer loading is injected independently of rendering/motion.
+Program values/source health participate in change echoes; report ages and source
+contact timestamps do not. Diagnostic buffers are program/source views in this
+mode; source scrolling never uses Claude event-history anchoring.
+
+`dashboard.OpenViewer` is the independent, optional local launch/reuse boundary.
+It verifies IPC peer credentials and live context before executing a local path;
+locks and atomic private receipts serialize an exact build/configuration/anchor.
+Pending receipts survive uncertain split outcomes and block unsafe duplicate
+creation. Launch records store ownership metadata only, not observation data.
+Changing layouts never starts observed agents; closing a Rex observer cancels
+its own local subscription processes, not remote work. No Rex settings, legacy
+collector, remote scripts or remote application hooks are installed.
 
 ## Storage and installation safety
 

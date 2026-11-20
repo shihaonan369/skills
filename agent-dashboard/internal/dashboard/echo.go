@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -50,6 +51,21 @@ func echoValues(s *State) map[echoKey]string {
 		out[taskKey(id, "subject")] = t.Subject
 		out[taskKey(id, "owner")] = t.Owner
 		out[taskKey(id, "blocked")] = strings.Join(t.BlockedBy, "\n")
+	}
+	if s.ProgramReports != nil {
+		for _, source := range s.ProgramReports.Sources {
+			out[sourceKey(source.Source.Name)] = source.Health + "\n" + source.Error
+			for _, program := range source.Programs {
+				r := program.Record
+				r.UpdatedAt = "" // report age is not activity
+				if r.EffectiveApp != "" {
+					r.App = r.EffectiveApp
+				}
+				r.EffectiveApp = ""
+				raw, _ := json.Marshal(r)
+				out[programKey(program.Key)] = string(raw)
+			}
+		}
 	}
 	out[sessionKey("title")] = s.Title
 	out[sessionKey("finished")] = strconv.FormatBool(s.Finished)
@@ -125,6 +141,10 @@ func panelEchoKeys(p Panel, s *State) [][]echoKey {
 		}
 	}
 	switch p.Kind {
+	case "programs":
+		return rowKeys(programRows(p, s, time.Time{}))
+	case "sources":
+		return rowKeys(sourceRows(p, s, time.Time{}))
 	case "session":
 		return [][]echoKey{{sessionKey("title")}, nil, {actorKey("lead", "status"), sessionKey("finished")}, {actorKey("lead", "model")}, {sessionKey("progress")}, {actorKey("lead", "active")}}
 	case "agent":
@@ -187,6 +207,9 @@ func appendedEvents(old, next []Event) []Event {
 	return nil // wholesale replacement/empty baseline: do not invent continuity
 }
 func (v *Viewer) anchorEventHistory(next *State) {
+	if next.ProgramReports != nil {
+		return
+	} // buffer 3 is source metadata, not an event log
 	if v.State == nil {
 		return
 	}

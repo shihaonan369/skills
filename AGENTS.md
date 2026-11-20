@@ -9,6 +9,17 @@
 - Keep changes in this repository. Do not modify Rex configuration or reinstall the legacy Rex-only dashboard. Do not publish, push, or deploy to remote hosts without user instruction.
 - Record exact validation scope. A Linux/Windows cross-build is not a verified runtime test. The user requested a fresh Pi to take over implementation; work autonomously within the accepted scope and report blockers instead of silently weakening requirements.
 
+## Skill setup ownership
+
+Skills own routine setup. When a skill needs native assets, provide an
+agent-invoked bootstrap that selects a pinned platform release, verifies bundled
+checksums, and installs atomically without overwriting unrelated content.
+The agent performs downloads, extraction, and readiness checks instead of asking
+the user to run commands. Reuse installed assets; require no extra end-user
+runtime/package installation. Get approval before changing application settings
+or hooks, then perform approved changes. Surface actual policy, permissions, or
+environment blockers rather than weakening integrity checks or hiding failures.
+
 ## Documentation layout
 
 Keep root `README.md` limited to the repository overview, skill index, and shared

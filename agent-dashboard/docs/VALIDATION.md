@@ -1,11 +1,95 @@
-# Validation matrix · 0.1.0
+# Validation matrix · source 0.2.0-dev
 
-Latest checks recorded **2026-11-15 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
+Latest checks recorded **2026-11-19 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
 Historical sections below retain their original scope.
 Local build toolchain: **Go 1.27.4**, archive SHA-256 checked before extraction
 into ignored `.build-tools/go/`; no system-wide toolchain/runtime installed.
 Claude Code used for historical integration checks: **2.1.312**.
 Distribution builds are unsigned; release assets are not signed/notarized packages.
+
+## Optional Rex adapters (2026-11-19)
+
+These results cover the source/development implementation, **not a public
+0.2.0 release**. The published 0.1.0 assets and bundled trusted pins remain
+unchanged. No Git commit/push, Release replacement, remote deployment,
+application settings edit, or real Claude API invocation was performed.
+
+| Scope | Result / exact boundary |
+| --- | --- |
+| Go regression | `go test -count=1 -race -cover -json ./...`: **85 top-level tests + 31 subtests passed**; helper entrypoint explicitly skipped in the parent and exercised as real native child processes. `go vet ./...` passed |
+| Coverage | Dashboard **90.7%**, CLI **71.7%**, Rex observer **88.2%**, packager **24.2%**; version constants have no executable statements |
+| Public interfaces | CLI dispatch/configuration, official CLI executor boundary, `Monitor.Snapshot` / `Ready` / `Close`, `OpenViewer`, layout parsing and public Bubble Tea model/rendering. No private monitor state or private snapshot message is required by the new tests |
+| Observation correctness | Whole-pane/whole-record replacement clears omitted fields and removed roots/children; source-qualified IDs isolate identical record IDs across hosts; known zero vs unknown progress; scope/topology/host/instance/sequence failures retain last-known data; reconnect baseline staging; late old/stopped callbacks rejected; snapshot copies are detached; discovery progress does not declare an incomplete source ready |
+| Native CLI processes | Actual Go helper subprocesses test child PID identity, cancellation/reaping, bounded stderr/stdout/wire lines and callback rejection. An initial real-process test exposed promoted `bytes.Buffer.ReadFrom` bypassing a writer limit; the final executor does not embed that buffer |
+| Official Lua runtime | Opt-in read-only contract test ran in the installed Rex CLI, with local synthetic API functions only. It verifies queued pre-baseline events cannot roll current state backward, removed reports/omitted fields clear, decoded `msg` and zero progress survive, foreign/unselected panes are never queried, missing server-event session context is safe, and process owners do not escape. No synthetic reports are submitted to Rex |
+| Local launch ownership | Concurrent opens share an OS lock; repeated opens reuse one viewer; focus/direct argv preserved; exact exited-owned viewer replacement; foreign labels/programs/placements untouched; missing/stale/unverified context falls back conservatively; uncertain and late split results reconcile without duplicate RPCs; durable pending receipts block unsafe retries; absolute root and original error causes are retained |
+| Real selected-host read | Native Mac viewer read structured reports from this host and one explicitly selected remote Rex server. The checked snapshot contained **5 local Pi reports + 11 remote Pi/Claude reports**. Counts are records, not inferred agents; live IDs, endpoints, status messages and source bindings remain private/ignored |
+| Native Rex UI/lifetime | Right-side packaged Go viewer opened and reused at the same ID; original pane/window focus verified. Compact caller canvas showed all checked reports. Own older viewer quit with `q`; a new packaged observer exited with Ctrl-C; known owned viewer/subscription PIDs were confirmed gone. A fresh native viewer remains open; observed programs and remote configuration were not changed |
+| Viewer semantics | Program reports create no Claude lead/session, task, tool or Issue completion. Actual headless Bubble Tea runtime verifies source-buffer scroll survives live reads and clock/report-age-only changes do not generate echoes. Caller source/key filters, inert control text and clipped geometry are covered |
+| Terminal-independent regression | **Three native macOS POSIX PTY runs** passed: ordinary canvas with q, ordinary canvas with Ctrl-C, and synthetic Review DAG with effects/navigation/resize. Terminal restoration and collection retention passed; this is not new real-Claude acceptance |
+| Bootstrap regression | **19 POSIX + 13 PowerShell tests passed** again. PowerShell is **7.7.0 on macOS**, not Windows/PowerShell 5.1 validation. No download pins were regenerated |
+| Distribution | Six **0.2.0-dev** binaries/ZIPs cross-built locally with the embedded observer, new Rex documentation/example, both bootstrap helpers and unchanged pins; exactly one platform binary per archive, no Python/legacy/test/Lua runtime files. All **12** local-manifest and **6** archive-manifest entries verified; native packaged capabilities and isolated synthetic frame passed |
+| Independent review | One read-only launcher review completed. It is not a complete independent observer/security audit; no second completed review is claimed |
+
+Actual source servers used Rex **0.1.0-preview.19** locally and
+**0.1.0-preview.21** remotely. Observer Lua runs on the **Mac CLI**, not inside
+the remote server. Reading a remote Linux server is therefore **not native Linux
+or Windows dashboard runtime validation**. No remote files, hooks, scripts or
+Rex settings were installed. All non-Mac-arm64 targets remain cross-build-only.
+The temporary Python/curses probe is not product code or a shipped runtime.
+
+The CLI does not expose a documented snapshot watermark/readiness barrier to
+this adapter. Events invalidate and re-read current full pane reports; periodic
+60-second reconciliation explicitly covers startup gaps. No lossless-delivery,
+fixed-refresh, exhaustive-agent-telemetry, code-signing, or Issue-completion
+claim is made. Full Pi lifecycle/tools/tasks are still not implemented.
+
+Reproduce the extra local Lua check only with an existing Rex CLI/session:
+
+```sh
+AGENT_DASHBOARD_TEST_REX="$(command -v rex)" \\
+  .build-tools/go/bin/go test -count=1 -race -cover ./...
+```
+
+Ordinary tests skip that opt-in test if the environment variable is absent;
+portable fake-CLI and real native helper-process contracts still run. Existing
+Claude integration evidence below is historical, not rerun for this adapter.
+
+## Agent-managed first-use bootstrap (2026-11-16)
+
+The agent now runs a platform bootstrap before `doctor`: missing binaries are
+downloaded automatically from the pinned public 0.1.0 release, checked against
+both bundled archive pins and the published manifest, and published atomically
+without replacing source files or configuring hooks. Existing executables are
+reused offline. Hook configuration still requires approval and is performed by
+the agent rather than delegated as shell instructions to the user.
+
+| Scope | Result / exact boundary |
+| --- | --- |
+| POSIX bootstrap contracts | **19 tests passed** on macOS `/bin/sh`: verified acquisition, offline reuse, changed archive/remote checksum rejection against source pins, malformed/missing/duplicate checksums, missing/duplicate/empty ZIP members, path traversal never extracted, symlink/foreign-path refusal, a racing destination directory, parallel first use, cleanup, spaces and skill-directory symlinks, curl/wget and SHA-256 utility selection, ZIP-capable tar fallback. Linux architectures and Rosetta detection use mocked system utilities, not native Linux/Rosetta execution |
+| PowerShell bootstrap contracts | **13 tests passed** under **PowerShell 7.7.0 on macOS**, with only the download boundary replaced by a fixture function in memory. Actual parsing, .NET ZIP/file operations, locking, publication, cleanup, native-architecture environment selection, offline reuse, missing pins, integrity failures, invalid entries, link/foreign-directory refusal, concurrent calls, and reuse of an abandoned empty lock file were exercised. This is **not Windows or PowerShell 5.1 runtime validation** |
+| Public POSIX acquisition | Fresh isolated source directory without `bin/`: real anonymous GitHub manifest + Mac ARM64 ZIP download, bundled-pin verification, executable installation, and native `version` startup passed. A second call reused the binary without acquisition output; skill instructions and README remained byte-identical |
+| Public PowerShell acquisition | Actual unmodified helper ran in PowerShell on macOS with Windows architecture environment variables: downloaded and verified the public Windows ARM64 ZIP, selected ARM64 despite an AMD64 process variable, and streamed the expected PE member. A second call reused it. The Windows executable was **not run** |
+| Go regression | `go test -count=1 -race -cover -json ./...`: **54 top-level tests + 15 subtests passed**; `go vet ./...` passed. Core coverage **91.3%**, CLI **61.7%**, packager **24.2%**. Two new packager tests cover bootstrap/pin inclusion without developer-runtime files and all six platform pins |
+| Distribution | Six native-target binaries/ZIPs rebuilt locally. Every archive includes both helpers, bundled pins, and exactly one platform binary; developer tests/Python are excluded. All **12** binary/archive entries in the local build manifest and **6** archive-only release-manifest entries were checked. Non-Mac targets remain **cross-build-only** |
+
+The developer-only PowerShell distribution was downloaded and SHA-256 verified
+against its GitHub asset digest into ignored `.build-tools/powershell/`; no
+system-wide runtime/package installation was performed. Run the contract tests
+from the skill directory with:
+
+```sh
+AGENT_DASHBOARD_TEST_PWSH="$PWD/.build-tools/powershell/pwsh" \\
+  python3 -m unittest discover -s tests -p 'test_bootstrap*.py' -v
+```
+
+The initial POSIX tests failed before `bootstrap.sh` existed, then passed after
+implementation. All network/ZIP test fixtures are explicitly synthetic. Public
+smokes used temporary source directories under ignored `target/`, cleaned on
+exit. No real Claude session, app settings, hooks, or private telemetry were
+changed; no GitHub assets were replaced and no commit/push/publish was performed.
+These changes do not add Pi telemetry. The original public 0.1.0 asset hashes
+remain pinned; local repackaging does not silently change the trusted downloads.
 
 ## Release packaging and privacy checks (2026-11-15)
 
