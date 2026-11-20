@@ -25,7 +25,7 @@ if ($errors.Count -ne 0) { throw ($errors | Out-String) }
 $download = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Receive-Asset' }, $true)
 $mock = @'
 function Receive-Asset([Uri] $Uri, [string] $Path, [long] $Limit) {
-    if (-not $Uri.AbsoluteUri.StartsWith('https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.1.0/')) {
+    if (-not $Uri.AbsoluteUri.StartsWith('https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/')) {
         throw 'Unexpected download source.'
     }
     [IO.File]::AppendAllText($env:BOOTSTRAP_LOG, $Uri.AbsoluteUri + "`n")
@@ -66,7 +66,7 @@ class PowerShellBootstrapTests(unittest.TestCase):
         self.archive()
 
     def archive(self, target="windows-amd64", members=None):
-        self.asset = f"agent-dashboard-0.1.0-{target}.zip"
+        self.asset = f"agent-dashboard-0.2.0-{target}.zip"
         self.payload = b"synthetic executable; must not be run"
         self.member = f"agent-dashboard/bin/{target}/agent-dashboard.exe"
         archive = self.assets / self.asset

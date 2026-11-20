@@ -7,6 +7,42 @@ into ignored `.build-tools/go/`; no system-wide toolchain/runtime installed.
 Claude Code used for historical integration checks: **2.1.312**.
 Distribution builds are unsigned; release assets are not signed/notarized packages.
 
+## Published 0.2.0 and source-main pins (2026-11-20)
+
+Published **Agent Dashboard v0.2.0** at **2026-11-20 09:32:56 UTC**, tag
+`agent-dashboard-v0.2.0`, release-code commit `bc4065a`. The release contains
+exactly **six platform ZIPs + archive-only SHA256SUMS**. Source-main bootstrap
+constants and all six trusted archive pins were repinned in a separate follow-up;
+the release tag and uploaded assets were not rebuilt or moved.
+
+- Authenticated draft metadata confirmed every uploaded asset's exact local
+  byte size and SHA-256 before publication.
+- `python3 tests/release_smoke.py --expected-checksums <reviewed-local-manifest>`
+  passed **anonymous downloads of all six ZIPs and the manifest**, matching the
+  public manifest byte-for-byte to reviewed local artifacts and every ZIP to
+  its expected SHA-256. Archive paths, platform membership, required docs,
+  bootstrap helpers/marker and personal-data patterns were checked.
+- The anonymously downloaded native macOS arm64 package passed **offline
+  bootstrap, exact version and all three capabilities, CLI validation of all
+  17 bundled JSON examples, and isolated synthetic plain rendering**.
+- A fresh source-like directory with spaces, the real helper and new bundled
+  pins downloaded published 0.2.0 **without authentication**, verified the
+  remote manifest/archive, installed atomically, and matched the reviewed native
+  binary exactly. Version/capabilities passed; a second bootstrap succeeded
+  offline with no HTTPS/hash/ZIP utilities on PATH. Temporary bootstrap files
+  were removed and skill instructions were unchanged.
+- After repinning, **97 top-level Go tests + 56 subtests** passed again with
+  race/coverage enabled and two conditional skips; `go vet` passed. All
+  **20 POSIX + 14 PowerShell bootstrap tests** passed again on macOS.
+- GitHub's latest release resolves to 0.2.0. The original **0.1.0 asset IDs,
+  names, sizes and digests are unchanged**.
+
+The source follow-up does not replace an installed binary or modify application
+settings/hooks, private layouts, Rex configuration, or remote hosts. Public
+cross-platform downloads/package checks are not foreign-OS runtime verification;
+only macOS arm64 was run. The real fresh-download test did not install hooks,
+submit telemetry or invoke Claude.
+
 ## Version 0.2.0 release preparation (2026-11-20)
 
 The user authorized commit, push and release. Version 0.2.0 includes the optional
