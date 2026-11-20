@@ -4,8 +4,8 @@
 `dag` is a leaf Panel in the bundled Go executable, composable with all other
 Panels through `row` / `column`. No Python or other end-user runtime is required.
 There is no graph executor, agent router, automatic dependency inference or
-fixed workflow. A graph with return annotations has an acyclic ordinary-edge
-core; the return annotations do not participate in ranking.
+fixed workflow. All declared edges flow forward through one directed acyclic
+graph; every edge participates in ranking.
 
 ## Publish through the existing layout interface
 
@@ -47,8 +47,7 @@ Example layout (the example declares structure, not actual execution):
           ],
           "edges": [
             {"from": "lead", "to": "a", "label": "caller declares"},
-            {"from": "a", "to": "note", "style": "dashed"},
-            {"from": "note", "to": "lead", "style": "return"}
+            {"from": "a", "to": "note", "style": "dashed"}
           ]
         }
       },
@@ -64,62 +63,54 @@ Example layout (the example declares structure, not actual execution):
   The surrounding Panel's `title` controls its heading; `name` is graph metadata.
 - Node: required unique printable `id`; optional `label` (defaults to ID),
   `color`, `bind`, `meta` (caller-authored lines, not telemetry).
-- Binding: exactly one of `{"actor":"<observed-id>"}` or
-  `{"task":"<reported-id>"}`. Use `actor: lead` for the root session.
+- Binding: exactly one of `{"actor":"<observed-id>"}`,
+  `{"task":"<reported-id>"}`, or (0.2.0+ with `observation-bindings-v1`)
+  `{"program":"<full-rex-key>"}`. This is the same typed reference used by
+  record Panels; see [shared observations](OBSERVATIONS.md). Use `actor: lead`
+  for the Claude root session.
   IDs are exact; role names/labels do not classify or create agents.
 - Edge: required `from`, `to` referencing declared nodes; optional `label` and
-  `style` (`solid`, `dashed`, `return`; omitted means solid).
-  Duplicate directed endpoint pairs are rejected. Return self-edges are allowed;
-  ordinary self-edges and cycles are rejected.
+  `style` (`solid` or `dashed`; omitted means solid).
+  Duplicate directed endpoint pairs, self-edges and all cycles are rejected.
 - Node colors use the Panel palette (see `PANELS.md`). Earlier graph colors
   `orange`, `green`, `teal`, `amber`, `white` are also supported.
 
-Unknown fields, invalid styles/colors/bindings and ordinary-edge cycles are
+Unknown fields, invalid styles/colors/bindings and cycles are
 errors. Limits per graph: 1..64 nodes, at most 256 edges; node ID 80 bytes,
 label/name/edge label 160 bytes, binding ID 120 bytes; at most 4 meta lines,
 2000 input bytes each (sanitized to 400 runes). Terminal controls/bidi overrides
 are removed from display text; IDs containing them are rejected. The whole
 layout remains subject to its existing 256 KiB and tree limits.
 
-## Parent/child delegation and reporting
+Program-bound nodes display literal Rex report state, not a fabricated actor or
+task. `working` activity requires a live source; disconnection retains a static
+`LAST KNOWN` state. Program `done` does not add a task-success check or imply
+Issue completion. The relationship inspector and change echoes resolve the same
+binding as cards/lists. Use `rex-watch --sources @private.json --layout @layout.json`
+or `open --sources ...` for a Rex composition; no Claude session ID is required.
 
-A round trip is **two independent directed declarations**, not a single
-undirected line and not a workflow loop inferred by the viewer:
+## Forward-only graph and older layouts
 
-```json
-{
-  "version": 1,
-  "nodes": [
-    {"id": "parent", "bind": {"actor": "lead"}, "color": "peach"},
-    {"id": "child", "bind": {"actor": "<actual-child-id>"}, "color": "blue"}
-  ],
-  "edges": [
-    {"from": "parent", "to": "child", "label": "delegate work"},
-    {"from": "child", "to": "parent", "label": "report results", "style": "return"}
-  ]
-}
-```
+Declare only the forward structure the caller wants to inspect, for example
+parent → worker → findings. The viewer never identifies or draws a reply path
+from chronology, record ID hierarchy or a worker's returned state. Nodes keep
+their literal observed status independently of the edge structure.
 
-The ordinary edge lays out parent above child; the explicit return annotation
-has its own external rail and does not change ranks. Packets follow each edge's
-own source → destination order, so the child's report travels **up** its rail
-toward the parent. The rail keeps a visible `▲` marker (or `▼` for a
-downward route); destination arrowheads identify the actual receiver. Colors
-follow the declared source node, distinguishing delegation from the reply.
-Graphs containing explicit opposite endpoint pairs show `⇄ paired arrows`.
+Reverse/return routes, paired-arrow indicators, upward flow animation and the
+`r` return-traversal control have been removed in version 0.2.0. A former
+`style: return` edge is now an explicit validation error, including when that
+style was placed on an otherwise forward edge. Ordinary opposite-edge pairs
+and self-edges are invalid cycles as well. Delete those obsolete edges in the
+caller's private composition and republish; there is no silent conversion,
+edge reversal, layout rewrite or modification of installed/private state.
+An older persisted graph shows an `Invalid DAG` diagnostic until replaced.
+[Historical validation](VALIDATION.md) describes the capabilities of its dated
+builds, not the current graph contract. Public 0.1.0 assets remain unchanged.
 
-Labels express the caller's communication contract, not measured message
-contents or timing. A report edge can coexist with child → verdict findings
-aggregation; it does not mean the child is a parent, create another agent or
-complete a task. Only the caller declares that work should be reported back.
-Last-observed child status is still displayed separately; moving reply packets
-do not prove that a result has arrived. Without the explicit reverse edge, the
-viewer does not invent one. Two opposite ordinary edges remain an invalid cycle:
-mark the reporting edge `return`.
-
-See `examples/dag/delegation.layout.json` for an explicitly synthetic small
-parent/child round trip, and the AI Hero Review workspaces for two parallel
-workers each reporting back to their lead.
+The small synthetic `examples/dag/delegation.layout.json` now declares only
+parent → child. AI Hero Review examples retain lead → worker delegation and
+worker → verdict findings, without worker → lead reporting edges. Workflow
+repetition, when relevant, belongs to the caller outside this graph.
 
 ## Observation semantics
 
@@ -139,8 +130,8 @@ workers each reporting back to their lead.
 
 Every declared edge has moving colored heads (`●`) with short fading trails.
 Packets follow the same source-to-destination polyline as the stroke, including
-dashed, cross-rank and return routes. Arrowheads and node text remain readable.
-The Panel labels this **Flow animation · decorative**: these are presentation
+dashed and cross-rank routes. Arrowheads and node text remain readable.
+The Panel labels this **Forward flow · decorative**: these are presentation
 effects, not measured data transfers, scheduling, causal relationships or proof
 that any worker is alive. They can move even on unknown/returned nodes.
 
@@ -169,8 +160,6 @@ the DAG leaf is focused:
 - `c`: clear node selection; keep the chosen scope/sidebar preferences.
 - `f`: cycle direct neighbors → all upstream → all downstream → both.
   Direct neighbors is the default.
-- `r`: include/exclude return edges from focus traversal (included by default).
-  Exclusion leaves the actual declared edge visible; it never edits the graph.
 - `i`: toggle a 32-cell relationship sidebar **inside this leaf**, not a new
   caller panel. It shows the binding, literal state and relation/edge summaries.
   It needs a leaf width of at least **82 cells**; narrower leaves retain the
@@ -180,13 +169,11 @@ the DAG leaf is focused:
 
 With a selection, unrelated nodes/edges dim and unrelated packets stop. Related
 routes keep the existing geometry, and colored/text markers distinguish
-`*` selected, `<` upstream/incoming, `>` downstream/outgoing, `=` both and
-`.` unrelated. The edge legend preserves each independent directed declaration.
+`*` selected, `<` upstream/incoming, `>` downstream/outgoing and `.` unrelated. The edge legend preserves each independent directed declaration.
 No color interpretation alone is required.
 
-Opposite edges, return self-edges and cycles involving return edges are finite
-reachability sets, **not** enumerated execution paths. With returns included,
-a node can be both upstream and downstream; an isolated node selects only itself.
+Upstream/downstream focus inspects ancestors and descendants of the existing
+forward graph; it does not add a reverse flow. An isolated node selects only itself.
 Unknown/absent bindings remain unknown, unbound nodes remain declared-only.
 Neither reachability nor particles prove actual messages, causal execution,
 critical paths or worker liveness.
@@ -199,12 +186,12 @@ No schema, task, permission or collection state is changed.
 
 ## Layout, routing and keyboard
 
-Ranks follow longest paths through ordinary edges, top to bottom. Node order
+Ranks follow longest paths through all declared edges, top to bottom. Node order
 within a rank follows declaration order. Boxes have fixed 30-cell width, with
 labels/state/meta clipped by grapheme cell width. Nodes do not reorder or shrink
 into a different graph on small screens: the Panel becomes a viewport.
 
-Adjacent-rank edges use inline lanes. Cross-rank and return edges have dedicated
+Adjacent-rank edges use inline lanes. Cross-rank edges have dedicated
 right-hand rails and connect above/below boxes, not through intermediate nodes.
 Line crossings are not graph nodes. Arrowheads identify destinations; a
 scrollable edge legend below the graph preserves all endpoint IDs, labels and
@@ -223,15 +210,16 @@ crossing-minimizing graph editor.
 ## Examples and earlier script
 
 - `examples/dag/delegation.layout.json`: explicitly synthetic parent → child
-  delegation plus child → parent reporting, each with its own direction.
+  delegation only.
 - `examples/dag/fanout.layout.json`: explicitly synthetic native DAG + tasks +
-  events composition, including a cross-rank edge and return annotation.
+  events composition, including a forward cross-rank edge.
 - `examples/ai-hero/{tdd,review,review-no-spec}.layout.json`: full native DAG +
   detail workspaces with live binding placeholders; the corresponding
   `.demo.layout.json` files are explicitly synthetic and fully fixture-bound.
   `{tdd,review}.dag.layout.json` are compact live alternatives. Plain `.dag.json`
   files are reusable graph objects. These are optional callers, not a default.
-- `examples/issue-loop/loop.dag.layout.json`: optional caller-declared loop.
+- `examples/issue-loop/loop.dag.layout.json`: one forward iteration of an
+  optional caller-owned issue loop, not a graph back edge.
 
 Preview without invoking Claude or changing its settings:
 

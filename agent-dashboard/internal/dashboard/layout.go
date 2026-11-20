@@ -21,22 +21,24 @@ type Layout struct {
 	Root    Panel  `json:"root"`
 }
 type Panel struct {
-	ID         string   `json:"id,omitempty"`
-	Kind       string   `json:"kind"`
-	Title      string   `json:"title,omitempty"`
-	Color      string   `json:"color,omitempty"`
-	Size       int      `json:"size,omitempty"`
-	Weight     int      `json:"weight,omitempty"`
-	StackBelow int      `json:"stack_below,omitempty"`
-	Children   []Panel  `json:"children,omitempty"`
-	Actor      string   `json:"actor,omitempty"`
-	Actors     []string `json:"actors,omitempty"`
-	TaskIDs    []string `json:"task_ids,omitempty"`
-	Sources    []string `json:"sources,omitempty"`
-	ProgramIDs []string `json:"program_ids,omitempty"`
-	Compact    bool     `json:"compact,omitempty"`
-	Text       []string `json:"text,omitempty"`
-	DAG        *DAG     `json:"dag,omitempty"`
+	Bind       *Binding  `json:"bind,omitempty"`
+	Bindings   []Binding `json:"bindings,omitempty"`
+	ID         string    `json:"id,omitempty"`
+	Kind       string    `json:"kind"`
+	Title      string    `json:"title,omitempty"`
+	Color      string    `json:"color,omitempty"`
+	Size       int       `json:"size,omitempty"`
+	Weight     int       `json:"weight,omitempty"`
+	StackBelow int       `json:"stack_below,omitempty"`
+	Children   []Panel   `json:"children,omitempty"`
+	Actor      string    `json:"actor,omitempty"`
+	Actors     []string  `json:"actors,omitempty"`
+	TaskIDs    []string  `json:"task_ids,omitempty"`
+	Sources    []string  `json:"sources,omitempty"`
+	ProgramIDs []string  `json:"program_ids,omitempty"`
+	Compact    bool      `json:"compact,omitempty"`
+	Text       []string  `json:"text,omitempty"`
+	DAG        *DAG      `json:"dag,omitempty"`
 }
 
 func ParseLayout(raw []byte) (*Layout, error) {
@@ -95,15 +97,41 @@ func ParseLayout(raw []byte) (*Layout, error) {
 			}
 		}
 		for _, id := range p.ProgramIDs {
-			if len(id) != 68 || !strings.HasPrefix(id, "rex:") || strings.IndexFunc(id[4:], func(r rune) bool { return !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f') }) >= 0 {
+			if !validProgramKey(id) {
 				return errors.New("program_ids require source-qualified Rex keys from rex-watch --status")
 			}
 		}
-		if len(p.Sources) > 0 && p.Kind != "programs" && p.Kind != "sources" {
-			return errors.New("sources filter belongs to programs/sources")
+		if len(p.Sources) > 0 && (p.Kind == "row" || p.Kind == "column" || p.Kind == "text" || p.Kind == "dag" || p.Actor != "" || len(p.Actors) > 0 || len(p.TaskIDs) > 0) {
+			return errors.New("sources filter requires an observation panel without legacy actor/task filters")
 		}
-		if len(p.ProgramIDs) > 0 && p.Kind != "programs" {
-			return errors.New("program_ids filter belongs to programs")
+		if len(p.ProgramIDs) > 0 && p.Kind != "programs" && p.Kind != "agents" && p.Kind != "tasks" && p.Kind != "events" {
+			return errors.New("program_ids filter belongs to program/list/event panels")
+		}
+		if len(p.ProgramIDs) > 0 && (len(p.Actors) > 0 || len(p.TaskIDs) > 0) {
+			return errors.New("program_ids cannot mix with native actor/task selectors")
+		}
+		if p.Bind != nil {
+			if err := p.Bind.validate(); err != nil {
+				return err
+			}
+			if (p.Kind != "agent" && p.Kind != "session") || p.Actor != "" || len(p.Bindings) > 0 {
+				return errors.New("bind belongs to single agent/session panels and cannot mix legacy bindings")
+			}
+		}
+		if len(p.Bindings) > 0 {
+			if len(p.Bindings) > 4096 || (p.Kind != "agents" && p.Kind != "tasks" && p.Kind != "events") || len(p.Actors) > 0 || len(p.TaskIDs) > 0 {
+				return errors.New("bindings belongs to list/event panels and cannot mix legacy filters")
+			}
+			seen := map[Binding]bool{}
+			for _, b := range p.Bindings {
+				if err := b.validate(); err != nil {
+					return err
+				}
+				if seen[b] {
+					return errors.New("duplicate observation binding")
+				}
+				seen[b] = true
+			}
 		}
 		p.Title = Clean(p.Title, 160)
 		p.Actor = Clean(p.Actor, 120)
@@ -153,8 +181,8 @@ func ParseLayout(raw []byte) (*Layout, error) {
 					return e
 				}
 			}
-			if p.Kind == "agent" && p.Actor == "" {
-				return errors.New("agent panel requires actor ID")
+			if p.Kind == "agent" && p.Actor == "" && p.Bind == nil {
+				return errors.New("agent panel requires actor ID or typed bind")
 			}
 			if len(p.Text) > 0 && p.Kind != "text" {
 				return errors.New("only text panels accept caller-authored text")
@@ -214,71 +242,7 @@ func contains(filter []string, id string) bool {
 	return false
 }
 func panelData(p Panel, s *State, now time.Time) []string {
-	switch p.Kind {
-	case "programs":
-		return programData(p, s, now)
-	case "sources":
-		return sourceData(p, s, now)
-	case "session":
-		if s.Agents["lead"] == nil {
-			return []string{"No Claude lifecycle session bound.", "Program reports do not provide task/tool lifecycle telemetry."}
-		}
-		completion := "not marked finished"
-		if s.Finished {
-			completion = "explicitly finished"
-		}
-		age := now.Sub(time.UnixMilli(s.Started)).Round(time.Second)
-		if age < 0 {
-			age = 0
-		}
-		a := s.Agents["lead"]
-		return []string{Clean(s.Title, 160), "Claude session · " + Clean(s.Session, 256), "Status " + Clean(a.Status, 80) + " | " + completion, "Model " + unknown(a.Model), "Reported plan " + s.Progress("") + " | elapsed " + age.String(), active(s, "lead")}
-	case "agent":
-		a := s.Agents[p.Actor]
-		if a == nil {
-			return []string{"Actor " + p.Actor, "Not observed; state/model/progress unknown"}
-		}
-		return agentData(s, a)
-	case "agents":
-		out := []string{}
-		for _, a := range sortedAgents(s) {
-			if contains(p.Actors, a.ID) {
-				out = append(out, agentData(s, a)...)
-				out = append(out, "")
-			}
-		}
-		if len(out) == 0 {
-			return []string{"No matching workers observed since opt-in.", "No parentage or model inferred."}
-		}
-		return out
-	case "tasks":
-		out := []string{}
-		for _, t := range sortedTasks(s) {
-			if !contains(p.TaskIDs, t.ID) {
-				continue
-			}
-			out = append(out, fmt.Sprintf("#%s [%s] %s", Clean(t.ID, 120), Clean(t.Status, 80), Clean(t.Subject, 240)), "owner "+unknown(t.Owner)+" | blocked by "+Clean(strings.Join(t.BlockedBy, ", "), 400))
-		}
-		if len(out) == 0 {
-			return []string{"No reported tasks; progress unknown."}
-		}
-		return out
-	case "events":
-		out := []string{}
-		for i := len(s.Events) - 1; i >= 0; i-- {
-			e := s.Events[i]
-			if contains(p.Actors, e.Actor) {
-				out = append(out, time.UnixMilli(e.Time).Format("15:04:05")+" · "+Clean(e.Actor, 120)+" · "+Clean(e.Text, 400))
-			}
-		}
-		return out
-	case "text":
-		return append([]string{"[Caller-authored text · not hook telemetry]"}, p.Text...)
-	}
-	return nil
-}
-func agentData(s *State, a *Agent) []string {
-	return []string{Clean(a.Role, 100) + " · " + Clean(a.ID, 120) + " · " + Clean(a.Status, 80), "model " + unknown(a.Model) + " | " + s.Progress(a.ID), fmt.Sprintf("tools %d · errors %d | %s", a.Tools, a.Errors, active(s, a.ID))}
+	return rowText(observationRows(p, s, now))
 }
 
 // Allocations preserve caller order. Fixed sizes are honored while they fit;
@@ -438,8 +402,12 @@ func renderPanel(p Panel, s *State, w, h int, now time.Time, o canvasOptions) []
 	if p.Kind == "dag" {
 		return renderDAGPanel(p, s, w, h, o, title, color)
 	}
-	data := panelData(p, s, now)
-	keys := panelEchoKeys(p, s)
+	rows := observationRows(p, s, now)
+	data, keys := rowText(rows), rowKeys(rows)
+	markRows := false
+	for _, row := range rows {
+		markRows = markRows || len(row.keys) > 0
+	}
 	offset := o.Offsets[p.ID]
 	capacity := h - 3
 	if offset > max(0, len(data)-1) {
@@ -454,7 +422,7 @@ func renderPanel(p Panel, s *State, w, h int, now time.Time, o canvasOptions) []
 	body := []string{panelHeading(title, color, w-2, focused)}
 	for i := offset; i < len(data) && len(body) < h-2; i++ {
 		row := Clean(data[i], 2000)
-		if p.Kind == "session" || p.Kind == "agent" || p.Kind == "agents" || p.Kind == "tasks" {
+		if markRows {
 			var rowKeys []echoKey
 			if i < len(keys) {
 				rowKeys = keys[i]

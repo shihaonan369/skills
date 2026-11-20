@@ -11,7 +11,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-const linkFixture = `{"version":1,"root":{"kind":"column","children":[{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"lead","bind":{"actor":"lead"}},{"id":"a","bind":{"actor":"absent"}},{"id":"b"},{"id":"end","bind":{"task":"t"}},{"id":"note"}],"edges":[{"from":"lead","to":"a"},{"from":"lead","to":"b"},{"from":"a","to":"end"},{"from":"b","to":"end"},{"from":"a","to":"lead","style":"return","label":"paired report"},{"from":"end","to":"lead","style":"return"},{"from":"a","to":"a","style":"return"}]}},{"id":"log","kind":"events","size":5}]}}`
+const linkFixture = `{"version":1,"root":{"kind":"column","children":[{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"lead","bind":{"actor":"lead"}},{"id":"a","bind":{"actor":"absent"}},{"id":"b"},{"id":"end","bind":{"task":"t"}},{"id":"note"}],"edges":[{"from":"lead","to":"a"},{"from":"lead","to":"b"},{"from":"a","to":"end"},{"from":"b","to":"end"}]}},{"id":"log","kind":"events","size":5}]}}`
 
 func viewerKey(v Viewer, key string) Viewer {
 	m, _ := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)})
@@ -29,34 +29,30 @@ func linkViewer(t *testing.T) (Viewer, string) {
 	}
 	return Viewer{State: snap(t, root), Width: 120, Height: 42}, root
 }
-func TestLinkFocusNeighborDirectionsAndCycleReachability(t *testing.T) {
+func TestLinkFocusNeighborDirectionsAndAcyclicReachability(t *testing.T) {
 	v, _ := linkViewer(t)
-	g := v.State.Layout.Root.Children[0].DAG
-	f := linkFocus{Node: "a"}
-	r := declaredRelations(g, f)
-	if !reflect.DeepEqual(r.incoming, map[int]bool{0: true, 6: true}) || !reflect.DeepEqual(r.outgoing, map[int]bool{2: true, 4: true, 6: true}) {
-		t.Fatal("direct neighbors lost independent directions or self-return", r)
+	graph := v.State.Layout.Root.Children[0].DAG
+	focus := linkFocus{Node: "a"}
+	relations := declaredRelations(graph, focus)
+	if !reflect.DeepEqual(relations.incoming, map[int]bool{0: true}) || !reflect.DeepEqual(relations.outgoing, map[int]bool{2: true}) {
+		t.Fatal("direct neighbor directions lost", relations)
 	}
-	if r.edgeMark(0) != "<" || r.edgeMark(4) != ">" || r.edgeMark(6) != "=" || r.nodeMark("a", "a") != "*" || r.nodeMark("note", "a") != "." {
-		t.Fatal("non-color directional markers missing", r)
+	if relations.edgeMark(0) != "<" || relations.edgeMark(2) != ">" || relations.nodeMark("a", "a") != "*" || relations.nodeMark("note", "a") != "." {
+		t.Fatal("direction markers missing", relations)
 	}
-	f.Scope = 3
-	r = declaredRelations(g, f)
-	if len(r.incoming) != 7 || len(r.outgoing) != 7 || r.up["note"] || r.down["note"] {
-		t.Fatal("finite cycle reachability incorrect", r)
+	focus = linkFocus{Node: "end", Scope: 3}
+	relations = declaredRelations(graph, focus)
+	if len(relations.incoming) != 4 || len(relations.outgoing) != 0 || !relations.up["lead"] || relations.up["note"] {
+		t.Fatal("transitive ancestors incorrect", relations)
 	}
-	f.ExcludeReturns = true
-	r = declaredRelations(g, f)
-	if len(r.incoming) != 1 || len(r.outgoing) != 1 || r.edgeMark(4) != "." || !r.up["lead"] || !r.down["end"] {
-		t.Fatal("return toggle deleted or incorrectly traversed edges", r)
+	focus = linkFocus{Node: "lead", Scope: 2}
+	relations = declaredRelations(graph, focus)
+	if len(relations.outgoing) != 4 || len(relations.incoming) != 0 || !relations.down["end"] {
+		t.Fatal("downstream scope missed descendants", relations)
 	}
-	f.Scope = 1
-	if r = declaredRelations(g, f); len(r.outgoing) != 0 {
+	focus.Scope = 1
+	if relations = declaredRelations(graph, focus); len(relations.outgoing) != 0 {
 		t.Fatal("upstream scope traversed downstream")
-	}
-	f.Scope = 2
-	if r = declaredRelations(g, f); len(r.incoming) != 0 {
-		t.Fatal("downstream scope traversed upstream")
 	}
 }
 func TestLinkFocusKeysKeepViewportAndTelemetryIndependent(t *testing.T) {
@@ -64,15 +60,15 @@ func TestLinkFocusKeysKeepViewportAndTelemetryIndependent(t *testing.T) {
 	before, _ := json.Marshal(v.State)
 	v.Offsets = map[string]int{"g": 3}
 	v.XOffsets = map[string]int{"g": 4}
-	for _, key := range []string{"]", "]", "f", "r", "i"} {
+	for _, key := range []string{"]", "]", "f", "i"} {
 		v = viewerKey(v, key)
 	}
 	f := v.Links["g"]
-	if f.Node != "a" || f.Scope != 1 || !f.ExcludeReturns || !f.Inspect || v.Offsets["g"] != 3 || v.XOffsets["g"] != 4 || v.Selected != 0 {
+	if f.Node != "a" || f.Scope != 1 || !f.Inspect || v.Offsets["g"] != 3 || v.XOffsets["g"] != 4 || v.Selected != 0 {
 		t.Fatal("focus keys changed viewport/focus or wrong local selection", v)
 	}
 	frame := ansi.Strip(v.Render(time.Unix(100, 0)))
-	for _, want := range []string{"DETAILS", "unobserved · unknown", "a:upstream -return"} {
+	for _, want := range []string{"DETAILS", "unobserved · unknown", "a:upstream"} {
 		if !strings.Contains(frame, want) {
 			t.Fatalf("missing %q\n%s", want, frame)
 		}
@@ -140,16 +136,16 @@ func TestLinkFocusSidebarGeometryAndLayoutReplacement(t *testing.T) {
 		t.Fatal("removed DAG kept stale local state")
 	}
 }
-func TestLinkFocusLegendKeepsReturnsAndIsolatedNodeHonest(t *testing.T) {
+func TestLinkFocusLegendKeepsForwardEdgesAndIsolatedNodeHonest(t *testing.T) {
 	v, _ := linkViewer(t)
 	g := v.State.Layout.Root.Children[0].DAG
 	before, _ := json.Marshal(g)
-	v.Links = map[string]linkFocus{"g": {Node: "note", Inspect: true, ExcludeReturns: true}}
+	v.Links = map[string]linkFocus{"g": {Node: "note", Inspect: true}}
 	v.Height = 80
 	frame := ansi.Strip(v.Render(time.Unix(100, 0)))
-	for _, want := range []string{"* note", "declared only", "No matching declared edges.", "[.] a → lead [return]", "paired report"} {
+	for _, want := range []string{"* note", "declared only", "No matching declared edges.", "[.] lead → a"} {
 		if !strings.Contains(frame, want) {
-			t.Fatalf("missing isolated or retained return declaration %q\n%s", want, frame)
+			t.Fatalf("missing isolated node or forward declaration %q\n%s", want, frame)
 		}
 	}
 	after, _ := json.Marshal(g)

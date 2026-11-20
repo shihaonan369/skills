@@ -13,7 +13,7 @@ After `start --session ID`, send one JSON object with `layout --session ID --jso
 picks it up at its next refresh. A rejected layout leaves the previous one intact.
 Use a private working file for live IDs or sensitive text; keep it outside git.
 
-Optional Rex source builds use `rex-watch --sources @private.json --layout
+Optional Rex mode (0.2.0+) uses `rex-watch --sources @private.json --layout
 @layout.json` instead of a Claude session store. Read [REX.md](REX.md) for the
 capability gate and explicit source opt-in. That viewer reads configuration at
 startup; changed source/layout content is a different launch, not a hot update
@@ -71,15 +71,26 @@ and a bold heading; unfocused Panels use thin rounded borders with the same geom
 
 | `kind` | Buffer/data binding | Optional fields |
 | --- | --- | --- |
-| `session` | Root Claude session: last observed lifecycle, model, reported task fraction, elapsed time | none |
-| `agent` | One **actual observed** actor; absent actors show not observed/unknown | required `actor` (use `lead` for root agent) |
-| `agents` | Observed subagents in start order; no inferred parent edges | `actors`: list of actual IDs to include; omitted = all observed workers |
-| `tasks` | Reported native/explicit task metadata, owner and dependencies | `task_ids`: IDs to include; omitted = all nondeleted tasks |
-| `events` | Newest-first bounded event buffer | `actors`: actor ID filter; omitted = all |
+| `session` | Root Claude session, or Rex source/session scope without invented lifecycle | optional typed `bind`; `sources` for Rex scope |
+| `agent` | One actual observed typed record; missing bindings stay unknown | `actor` (use `lead` for root agent) **or** typed `bind` |
+| `agents` | Observed subagents, or explicitly bound typed record cards; no inferred roles/parent edges | `actors`, or `bindings` / `program_ids`; optional `sources` for Rex |
+| `tasks` | Reported task metadata, or explicitly bound work-report records (not native tasks) | `task_ids`, or `bindings` / `program_ids`; optional `sources` for Rex |
+| `events` | Newest-first bounded native events or explicitly labelled local Rex observation changes | `actors`, or `bindings` / `program_ids`; optional `sources` for Rex |
 | `text` | Caller-authored operational text, explicitly labelled **not hook telemetry** | `text`: array of lines |
-| `dag` | Caller-declared directed graph; node states bind observed actor/task IDs | required `dag`: version-1 graph object; see [DAG contract](DAG.md) |
+| `dag` | Caller-declared directed graph; node states use the shared typed actor/task/program binding | required `dag`: version-1 graph object; see [DAG contract](DAG.md) |
 | `programs` | Optional Rex program reports, not agent/task lifecycle | `sources`: exact source aliases; `program_ids`: full source-qualified keys from `rex-watch --status`; `compact: true` for one source-prefixed row/report |
 | `sources` | Optional Rex host/instance identity, transport health, last-known/error information, report/unreported/excluded-pane counts | `sources`: exact source aliases |
+
+### Shared typed bindings (0.2.0+)
+
+Require `observation-bindings-v1` for `bind` / `bindings` and program projections
+in existing record panels. Every single-record panel and DAG node uses exactly
+the same typed reference; lists reuse it without separate Rex implementations.
+Read **[OBSERVATIONS.md](OBSERVATIONS.md)** before composing Rex cards, work rows,
+source/session scope, events or program-bound DAGs. It owns the exact binding,
+filter, missing-data, last-known and history contracts. Existing Claude selectors
+and layouts remain compatible. Rex program projections require explicit selection;
+an unbound native task/agent list does not silently substitute program reports.
 
 An ID placeholder is **not** an agent. Giving a panel the title “reviewer” never
 creates, classifies or assigns that role. Titles are presentation; actor bindings
@@ -93,8 +104,8 @@ block IDs are display only. Source and program filters intersect; missing keys
 stay unknown. Source failure preserves reported program state with a last-known
 label. Compact `?` means progress was not reported, not zero or idle. Use the
 program diagnostic buffer for full message/title, report age and known progress.
-A Claude lifecycle panel in a program-only viewer explicitly has no Claude
-session bound. These modes are not a merged/fabricated agent/task collection.
+A Rex `session` scope explicitly has no Claude lifecycle bound. Typed record
+projections never manufacture a merged agent/task collection.
 
 Limits: one object ≤256 KiB, ≤64 total nodes, depth ≤8, text ≤128 lines per leaf,
 ≤2000 input bytes/line (display/storage sanitize to ≤400 runes), title ≤160 bytes,
@@ -108,7 +119,7 @@ are stripped. Long lines clip by terminal cell width, including CJK/emoji.
 - Up/down/PgUp/PgDn: independent vertical scroll per focused buffer.
 - Left/right: horizontal pan in the focused DAG Panel; Home resets both axes.
 - DAG only: `[` / `]` select previous/next declared node; `c` clears selection;
-  `f` cycles relationship scope, `r` toggles return participation, `i` toggles
+  `f` cycles relationship scope, `i` toggles
   the optional in-leaf relationship sidebar. See [link focus](DAG.md#link-focus).
 - `1`: caller canvas. `2`/`3`: full-screen task/event **diagnostic buffers**
   (program/source diagnostics in Rex observation mode);
@@ -151,7 +162,7 @@ Its viewer can be reopened from another terminal on the **same host/data root**;
 several viewers observe the persisted layout independently. There is no renderer
 daemon, network port or workflow process. Optional Rex mode keeps observations
 in memory and owns cancellable local CLI subscriptions to explicitly selected
-sources; closing it stops those subscriptions, not the observed programs. Its
-change echoes compare whole report/source-health observations, never report ages
+sources; closing it stops those subscriptions, not the observed programs. Its bounded events panel records local changes and explicit baseline/gap boundaries.
+Its change echoes compare whole report/source-health observations, never report ages
 or contact clocks; the footer labels those units `observations`, not events or
 throughput. See [REX.md](REX.md) for its separate privacy/lifecycle boundary.

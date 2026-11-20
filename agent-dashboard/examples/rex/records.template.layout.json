@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "name": "Caller template - replace the all-zero program key",
+  "root": {
+    "kind": "column",
+    "children": [
+      {
+        "kind": "row",
+        "size": 12,
+        "stack_below": 90,
+        "children": [
+          {"id": "scope", "kind": "session", "title": "Selected Rex scope"},
+          {"id": "source", "kind": "sources", "title": "Source health"}
+        ]
+      },
+      {
+        "kind": "row",
+        "size": 10,
+        "stack_below": 90,
+        "children": [
+          {
+            "id": "record",
+            "kind": "agent",
+            "title": "Record card",
+            "bind": {"program": "rex:0000000000000000000000000000000000000000000000000000000000000000"}
+          },
+          {
+            "id": "cards",
+            "kind": "agents",
+            "title": "Record cards",
+            "bindings": [{"program": "rex:0000000000000000000000000000000000000000000000000000000000000000"}]
+          },
+          {
+            "id": "work",
+            "kind": "tasks",
+            "title": "Work reports - not native tasks",
+            "program_ids": ["rex:0000000000000000000000000000000000000000000000000000000000000000"]
+          }
+        ]
+      },
+      {
+        "id": "declared-graph",
+        "kind": "dag",
+        "title": "Caller-declared record and annotation",
+        "dag": {
+          "version": 1,
+          "nodes": [
+            {"id": "reported", "label": "Selected report", "bind": {"program": "rex:0000000000000000000000000000000000000000000000000000000000000000"}},
+            {"id": "annotation", "label": "Caller annotation", "meta": ["No relationship inferred"]}
+          ]
+        }
+      },
+      {"id": "history", "kind": "events", "title": "Local observation history", "size": 8},
+      {"id": "reports", "kind": "programs", "title": "All selected reports", "compact": true, "size": 6},
+      {
+        "id": "instructions",
+        "kind": "text",
+        "title": "Template notice",
+        "size": 5,
+        "text": ["Replace every all-zero key with one actual key from private rex-watch --status JSON.", "These are projections of one program report, not separate agents/tasks or a workflow."]
+      }
+    ]
+  }
+}

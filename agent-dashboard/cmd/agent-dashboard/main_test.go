@@ -111,9 +111,14 @@ func TestCLINativeDAGFileLivePlanAndRollback(t *testing.T) {
 	}
 	call("demo", "--json", "@../../examples/dag/fanout.layout.json")
 	frame := call("tui", "--session", "DEMO-layout", "--plain", "--width", "140", "--height", "48")
-	for _, want := range []string{"SYNTHETIC", "Declared topology", "dag", "in_progress", "[return]"} {
+	for _, want := range []string{"SYNTHETIC", "Declared topology", "dag", "in_progress", "Forward flow"} {
 		if !strings.Contains(frame, want) {
 			t.Fatalf("missing %q\n%s", want, frame)
+		}
+	}
+	for _, obsolete := range []string{"[return]", "⇄", "▲"} {
+		if strings.Contains(frame, obsolete) {
+			t.Fatal("CLI rendered obsolete reverse flow", frame)
 		}
 	}
 	call("plan", "--session", "DEMO-layout", "--json", `[{"id":"2","subject":"New observed value","status":"blocked"}]`)

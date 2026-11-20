@@ -34,11 +34,13 @@ Native Windows, in PowerShell:
 On success, the sole stdout line is the absolute executable path. Use it as
 quoted `<D>` below; PowerShell uses `& '<path>'`. The bootstrap reuses an existing
 binary without network access. If absent, it selects the native platform,
-downloads pinned release 0.1.0, verifies against bundled `bootstrap.sha256` and
+downloads its pinned release, verifies against bundled `bootstrap.sha256` and
 the published manifest, and atomically installs only the binary under `bin/`.
 It never edits hooks, settings, skill instructions, or layouts. No end-user
-runtime/package installation or build toolchain is needed. See
-`README.md` → First use for available system utilities and failure boundaries.
+runtime/package installation or build toolchain is needed. Prebundled platform
+packages use their included executable only; if it is missing, obtain a complete
+matching package rather than downloading a fallback. See `README.md` → First
+use and Release pin lifecycle for utility, distribution and upgrade boundaries.
 
 A nonzero bootstrap exit is a blocker: report the concrete network, permissions,
 policy, utility, or platform failure and stop setup. Do not hand back manual
@@ -50,9 +52,9 @@ failures; integrity failures require investigation, not a different download URL
 
 Run `<D> capabilities` for optional feature discovery. Published 0.1.0 binaries
 predate this command; an unknown command leaves normal Claude mode usable, but
-is a blocker for unshipped Rex features. Source builds are 0.2.0-dev; bootstrap
-pins intentionally remain at immutable 0.1.0 until a separately authorized
-release. Preserve integrity pins and report this distribution boundary honestly.
+is a blocker for Rex features. Version 0.2.0 advertises the capabilities below.
+Bootstrap never upgrades an existing binary; obtain approval before replacing
+an older installation, preserve integrity pins and verify the actual executable.
 
 - **Claude lifecycle/tools/tasks:** follow the hook readiness and attachment
   steps below. A Rex terminal is optional, never a collector prerequisite.
@@ -60,7 +62,10 @@ release. Preserve integrity pins and report this distribution boundary honestly.
   and follow `docs/REX.md` in full. Require its capability gates, resolve only
   the requested hosts, save private UTF-8 source/layout files, then open and
   verify the viewer yourself. This branch skips Claude hook setup and session
-  variables. It observes real program reports, not full Pi agent telemetry.
+  variables. For cards, work rows, source/session scope, observation history or
+  program-bound DAGs, require `observation-bindings-v1` and follow
+  `docs/OBSERVATIONS.md`. Use its shared typed bindings; keep program-report
+  projections distinct from native agents/tasks. This is not full Pi telemetry.
 - **Unsupported telemetry:** keep missing lifecycle/tools/tasks unknown and
   explain the actual boundary. A program report is not a substitute for a
   requested full agent adapter without agreement on the narrower scope.
@@ -135,18 +140,19 @@ When the caller requests a graph, read `docs/DAG.md` and add a `kind: dag`
 leaf to its existing row/column composition. The Panel's `dag` field contains
 the version-1 nodes/edges object. Publish the complete layout through the same
 `<D> layout --session "${CLAUDE_SESSION_ID}" --json @<private-layout-file>`
-interface, then use the normal `tui` viewer. No Python or separate graph process
-is needed.
+interface, then use the normal `tui` viewer. For a Rex source composition, use
+`rex-watch` / `open --sources` instead, following `docs/OBSERVATIONS.md` and
+`docs/REX.md`; bind full program keys, not Claude actor aliases. No Python or
+separate graph process is needed.
 
 - The caller explicitly declares nodes, edges and bindings. Real state comes
-  only from exact observed actor/task IDs; missing bindings stay unknown and
+  only from exact typed actor/task/program bindings; missing bindings stay unknown and
   unbound nodes show `declared only`. Never infer a workflow or agent parentage.
-- Ordinary edges must be acyclic; `style: return` annotations close declared
-  loops without affecting ranking. Cross-rank/return edges use external rails.
-  The graph never executes or schedules work. For a caller-declared delegation
-  and report contract, add separate parent → child and child → parent edges;
-  mark the report `style: return`. Each animates in its own direction; never
-  infer a reverse edge or message delivery from chronology or a returned state.
+- Every edge must belong to one forward acyclic graph; styles are `solid` or
+  `dashed`. Cross-rank edges use external rails. The graph never executes work
+  or draws replies from lifecycle state. Older `style: return` edges are rejected:
+  remove them from the caller's private composition before republishing. Preserve
+  actual actor/task/program bindings and leave installed/private state untouched.
 - Up/down scroll; left/right pan the focused DAG; Home resets both axes.
   Focus has a heavy highlighted border. Edge packets are decorative, never proof
   of traffic; `a` toggles motion and `p` freezes snapshot/animation, not collection.

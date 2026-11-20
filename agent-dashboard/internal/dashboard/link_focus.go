@@ -3,17 +3,17 @@ package dashboard
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
 
 // Link focus is viewer-local presentation of declared reachability, not traffic.
-// Zero values deliberately mean no selection, direct neighbors, returns included.
+// Zero values deliberately mean no selection, direct neighbors.
 type linkFocus struct {
-	Node           string
-	Scope          int
-	ExcludeReturns bool
-	Inspect        bool
+	Node    string
+	Scope   int
+	Inspect bool
 }
 
 func (f linkFocus) scopeName() string {
@@ -37,9 +37,6 @@ func declaredRelations(g *DAG, f linkFocus) linkRelations {
 			id := queue[0]
 			queue = queue[1:]
 			for i, e := range g.Edges {
-				if f.ExcludeReturns && e.Style == "return" {
-					continue
-				}
 				from, to := e.From, e.To
 				if up {
 					from, to = to, from
@@ -69,9 +66,6 @@ func declaredRelations(g *DAG, f linkFocus) linkRelations {
 }
 
 func relationMark(up, down bool) string {
-	if up && down {
-		return "="
-	}
 	if up {
 		return "<"
 	}
@@ -82,7 +76,7 @@ func relationMark(up, down bool) string {
 }
 func relationColor(mark string) string {
 	switch mark {
-	case "*", "=":
+	case "*":
 		return palette["purple"]
 	case "<":
 		return palette["peach"]
@@ -131,25 +125,17 @@ func linkDetails(g *DAG, s *State, f linkFocus, r linkRelations) []string {
 		status := "declared only"
 		if n.Bind != nil {
 			status = "unobserved · unknown"
-			if n.Bind.Actor != "" {
-				out = append(out, "Actor "+n.Bind.Actor)
-				if a := s.Agents[n.Bind.Actor]; a != nil {
-					status = unknown(a.Status)
-				}
-			} else {
-				out = append(out, "Task "+n.Bind.Task)
-				if t, ok := s.Tasks[n.Bind.Task]; ok {
-					status = unknown(t.Status)
+			out = append(out, n.Bind.label())
+			if e, ok := observations(s, time.Time{}).resolve(*n.Bind); ok {
+				status = unknown(e.Status)
+				if e.LastKnown {
+					status = "LAST KNOWN · " + status
 				}
 			}
 		}
 		out = append(out, "State "+status)
 	}
-	returns := "included"
-	if f.ExcludeReturns {
-		returns = "excluded from focus"
-	}
-	out = append(out, "Scope "+f.scopeName(), "Return "+returns, "[*] selected [=] both")
+	out = append(out, "Scope "+f.scopeName(), "[*] selected [<] upstream [>] downstream")
 	for _, group := range []struct {
 		name string
 		ids  map[string]bool
@@ -231,8 +217,6 @@ func (v *Viewer) linkKey(key string) {
 		f.Node = ""
 	case "f":
 		f.Scope = (f.Scope + 1) % 4
-	case "r":
-		f.ExcludeReturns = !f.ExcludeReturns
 	case "i":
 		f.Inspect = !f.Inspect
 	}

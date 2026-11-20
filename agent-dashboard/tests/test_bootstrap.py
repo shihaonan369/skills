@@ -196,6 +196,22 @@ shutil.copyfile(Path(os.environ["BOOTSTRAP_ASSETS"]) / url.rsplit("/", 1)[1], ar
         self.assertFalse(self.dest.exists())
         self.assert_clean()
 
+    def test_prebundled_package_never_downloads_a_fallback(self):
+        (self.skill / ".prebundled").write_text("platform package\n")
+        result = self.run_bootstrap()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("prebundled package", result.stderr)
+        self.assertFalse(self.log.exists())
+        self.assertFalse(self.dest.exists())
+        self.dest.parent.mkdir(parents=True)
+        self.dest.write_bytes(PAYLOAD)
+        self.dest.chmod(0o755)
+        result = self.run_bootstrap(DOWNLOAD_FAIL="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), str(self.dest))
+        self.assertFalse(self.log.exists())
+        self.assert_clean()
+
     def test_failed_download_cleans_temporary_files(self):
         result = self.run_bootstrap(DOWNLOAD_FAIL="1")
         self.assertNotEqual(result.returncode, 0)

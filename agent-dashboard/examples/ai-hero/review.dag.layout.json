@@ -71,24 +71,6 @@
               "from": "spec",
               "to": "verdict",
               "label": "findings"
-            },
-            {
-              "from": "verdict",
-              "to": "lead",
-              "label": "caller decides next action",
-              "style": "return"
-            },
-            {
-              "from": "standards",
-              "to": "lead",
-              "label": "report results",
-              "style": "return"
-            },
-            {
-              "from": "spec",
-              "to": "lead",
-              "label": "report results",
-              "style": "return"
             }
           ]
         }

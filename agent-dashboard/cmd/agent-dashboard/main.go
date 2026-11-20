@@ -83,7 +83,7 @@ func run(args []string, in io.Reader, out io.Writer) error {
 		return nil
 	}
 	if command == "capabilities" {
-		return json.NewEncoder(out).Encode(map[string]any{"version": buildinfo.Version, "features": []string{"rex-observer-v1", "rex-local-open-v1"}})
+		return json.NewEncoder(out).Encode(map[string]any{"version": buildinfo.Version, "features": []string{"rex-observer-v1", "rex-local-open-v1", "observation-bindings-v1"}})
 	}
 	if command == "rex-sources" || command == "rex-watch" || command == "open" {
 		return runRex(command, args[1:], out)

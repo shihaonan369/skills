@@ -73,12 +73,6 @@
               "from": "grill",
               "to": "pr",
               "label": "pass"
-            },
-            {
-              "from": "pr",
-              "to": "intake",
-              "label": "↻ next issue",
-              "style": "return"
             }
           ]
         }

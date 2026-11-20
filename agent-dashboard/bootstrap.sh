@@ -38,6 +38,7 @@ existing() {
     return 1
 }
 if existing; then exit 0; fi
+[ ! -e "$skill_dir/.prebundled" ] || fail 'prebundled package has no matching executable; acquire a complete package for this platform instead of downloading a fallback'
 
 # No package manager, compiler, Python, or Node installation is performed.
 if command -v curl >/dev/null 2>&1; then downloader=curl

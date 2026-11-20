@@ -37,7 +37,7 @@ func TestFocusUsesHeavyBorderWithoutChangingPanelGeometry(t *testing.T) {
 }
 
 func TestDAGDecorativePacketsMoveOnlyOnDeclaredPaths(t *testing.T) {
-	raw := []byte(`{"version":1,"root":{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"a"},{"id":"b"},{"id":"c"},{"id":"d"}],"edges":[{"from":"a","to":"b"},{"from":"a","to":"c","style":"dashed"},{"from":"b","to":"d"},{"from":"c","to":"d"},{"from":"a","to":"d"},{"from":"d","to":"a","style":"return"}]}}}`)
+	raw := []byte(`{"version":1,"root":{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"a"},{"id":"b"},{"id":"c"},{"id":"d"}],"edges":[{"from":"a","to":"b"},{"from":"a","to":"c","style":"dashed"},{"from":"b","to":"d"},{"from":"c","to":"d"},{"from":"a","to":"d"}]}}}`)
 	l, err := ParseLayout(raw)
 	if err != nil {
 		t.Fatal(err)
@@ -84,7 +84,7 @@ func TestDAGDecorativePacketsMoveOnlyOnDeclaredPaths(t *testing.T) {
 }
 
 func TestMotionClockDoesNotReadTelemetryAndPauseFreezesEffects(t *testing.T) {
-	l, err := ParseLayout([]byte(`{"version":1,"root":{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"a"},{"id":"b"}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"a","style":"return"}]}}}`))
+	l, err := ParseLayout([]byte(`{"version":1,"root":{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"a"},{"id":"b"}],"edges":[{"from":"a","to":"b"}]}}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,54 +172,34 @@ func BenchmarkAnimatedAIHero(b *testing.B) {
 	}
 }
 
-func TestDAGDelegationAndReportHaveIndependentDirections(t *testing.T) {
+func TestDAGDelegationDisplaysOnlyForwardFlow(t *testing.T) {
 	root := setup(t)
-	raw := []byte(`{"version":1,"root":{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"lead","label":"Parent","bind":{"actor":"lead"}},{"id":"worker","label":"Child","bind":{"actor":"actual-worker"}}],"edges":[{"from":"lead","to":"worker","label":"delegate work"},{"from":"worker","to":"lead","label":"report results","style":"return"}]}}}`)
+	raw := []byte(`{"version":1,"root":{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"lead","label":"Parent","bind":{"actor":"lead"}},{"id":"worker","label":"Child","bind":{"actor":"actual-worker"}}],"edges":[{"from":"lead","to":"worker","label":"delegate work"}]}}}`)
 	if err := SetLayout(root, "s", raw); err != nil {
 		t.Fatal(err)
 	}
 	send(t, root, Payload{Kind: "SubagentStart", AgentID: "actual-worker", AgentType: "caller-chosen-worker"})
-	s := snap(t, root)
-	v := Viewer{State: s, Width: 100, Height: 32, MotionOff: true}
-	frame := ansi.Strip(v.Render(time.Unix(100, 0)))
-	for _, want := range []string{"lead → worker · delegate work", "worker → lead [return] · report results", "▲", "⇄"} {
-		if !strings.Contains(frame, want) {
-			t.Fatalf("missing explicit round-trip detail %q\n%s", want, frame)
+	state := snap(t, root)
+	viewer := Viewer{State: state, Width: 100, Height: 32}
+	for i := 0; i < 20; i++ {
+		frame := ansi.Strip(viewer.Render(time.Unix(100, 0).Add(time.Duration(i) * 100 * time.Millisecond)))
+		if !strings.Contains(frame, "lead → worker · delegate work") || strings.Index(frame, "Parent") > strings.Index(frame, "Child") {
+			t.Fatal("forward delegation order lost", frame)
 		}
-	}
-	if strings.Index(frame, "Parent") > strings.Index(frame, "Child") {
-		t.Fatal("report edge changed acyclic delegation ranks")
-	}
-	railX := -1
-	for _, row := range strings.Split(frame, "\n") {
-		for x, ch := range []rune(row) {
-			if ch == '▲' {
-				railX = x
+		for _, obsolete := range []string{"worker → lead", "▲", "⇄", "[return]", "+return", "-return"} {
+			if strings.Contains(frame, obsolete) {
+				t.Fatal("reverse flow UI remains", obsolete, frame)
 			}
 		}
 	}
-	v.MotionOff = false
-	previous := -1
-	upwardSteps := 0
-	for i := 0; i < 60; i++ {
-		frame = ansi.Strip(v.Render(time.Unix(100, 0).Add(time.Duration(i) * 70 * time.Millisecond)))
-		yHead := -1
-		for y, row := range strings.Split(frame, "\n") {
-			cells := []rune(row)
-			if railX < len(cells) && cells[railX] == '●' {
-				yHead = y
-			}
-		}
-		if previous >= 0 && yHead >= 0 && yHead == previous-1 {
-			upwardSteps++
-		}
-		previous = yHead
+	// The retired key has no hidden effect and no longer creates link state.
+	before := viewer.Render(time.Unix(100, 0))
+	viewer = viewerKey(viewer, "r")
+	if viewer.Render(time.Unix(100, 0)) != before || len(viewer.Links) != 0 {
+		t.Fatal("retired return key still changes the viewer")
 	}
-	if upwardSteps < 3 {
-		t.Fatal("child report packets do not visibly travel up toward parent", upwardSteps)
-	}
-	if s.HookCount != 1 || len(s.Agents) != 2 || len(s.Tasks) != 0 || s.Finished {
-		t.Fatal("declaring a report edge fabricated execution or messages")
+	if state.HookCount != 1 || len(state.Agents) != 2 || len(state.Tasks) != 0 || state.Finished {
+		t.Fatal("forward presentation manufactured execution")
 	}
 }
 

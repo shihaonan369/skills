@@ -42,17 +42,28 @@ with tempfile.TemporaryDirectory(prefix="agent-dashboard-pty-") as root:
                     break
 
     try:
-        drain(1.2)
+        # A short forward edge exposes a decorative head only briefly each
+        # cycle. Wait for actual startup/effect output instead of assuming a
+        # fixed sampling window happens to include that phase.
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline:
+            drain(.2)
+            if process.poll() is not None:
+                break
+            ready = b"DEMO" in output and b"SYNTHETIC" in output
+            if "--effects" in sys.argv[2:]:
+                ready = ready and "●".encode() in output and "┏".encode() in output
+            if ready:
+                break
         assert process.poll() is None, output.decode(errors="replace")
         assert b"DEMO" in output and b"SYNTHETIC" in output
         if layout:
             assert b"dag" in output and b"Declared" in output, "native DAG was not rendered"
+            for obsolete in ("▲".encode(), "⇄".encode(), b"[return]"):
+                assert obsolete not in output, "obsolete reverse flow was rendered"
             if "--effects" in sys.argv[2:]:
                 assert "●".encode() in output, "decorative flow packets were not rendered"
                 assert "┏".encode() in output, "heavy focus frame was not rendered"
-            if "--round-trip" in sys.argv[2:]:
-                assert "⇄".encode() in output and "▲".encode() in output, "reply direction indicators absent"
-                assert b"report results" in output, "report-to-parent declaration absent"
         assert b"\x1b[?1049h" in output, "alternate screen was not entered"
         assert re.search(rb"\x1b\[[0-9;]*m", output), "color/style SGR output absent"
         if "--controls" in sys.argv[2:]:
@@ -61,7 +72,7 @@ with tempfile.TemporaryDirectory(prefix="agent-dashboard-pty-") as root:
             # This fixture starts on the DAG. The graph leaf must be at least
             # 82 columns wide for its optional in-leaf sidebar.
             for key, expected in ((b"]", b":neighbors"), (b"f", b":upstream"),
-                                  (b"i", b"DETAILS"), (b"r", b"-return")):
+                                  (b"i", b"DETAILS")):
                 start = len(output)
                 os.write(master, key)
                 drain(0.3)

@@ -20,6 +20,7 @@ const (
 	MaxPanes   = 256
 	MaxRecords = 4096
 	MaxMessage = 8 << 20
+	MaxChanges = 500
 )
 
 type Source struct {
@@ -101,6 +102,18 @@ type Record struct {
 	UpdatedAt    string `json:"updated_at,omitempty"`
 }
 
+// ObservationValue compares reported facts, excluding age/contact clocks. It
+// also normalizes explicit versus inherited app values to their displayed value.
+func (r Record) ObservationValue() string {
+	r.UpdatedAt = ""
+	if r.EffectiveApp != "" {
+		r.App = r.EffectiveApp
+	}
+	r.EffectiveApp = ""
+	raw, _ := json.Marshal(r)
+	return string(raw)
+}
+
 // ProgramID qualifies even an empty root record ID by its actual source.
 func ProgramID(host, session, block, record string) string {
 	raw, _ := json.Marshal([]string{host, session, block, record})
@@ -132,10 +145,22 @@ type SourceState struct {
 	Programs      []Program `json:"programs"`
 }
 
+// Change is a bounded local observation, not an agent lifecycle event or a
+// lossless server event stream. Baselines mark unknown history/reconnect gaps.
+type Change struct {
+	Time       time.Time `json:"time"`
+	Source     string    `json:"source"`
+	ProgramKey string    `json:"program_key,omitempty"`
+	Kind       string    `json:"kind"`
+	Text       string    `json:"text"`
+}
+
 type Snapshot struct {
-	Revision uint64        `json:"revision"`
-	Started  time.Time     `json:"started"`
-	Sources  []SourceState `json:"sources"`
+	DroppedChanges uint64        `json:"dropped_changes,omitempty"`
+	Changes        []Change      `json:"changes,omitempty"`
+	Revision       uint64        `json:"revision"`
+	Started        time.Time     `json:"started"`
+	Sources        []SourceState `json:"sources"`
 }
 
 // Rex Lua encodes empty tables as {}, including empty API arrays. Only that

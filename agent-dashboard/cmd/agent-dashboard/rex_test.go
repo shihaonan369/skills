@@ -122,7 +122,7 @@ func TestRexCLIValidationCapabilitiesAndTerminalFallback(t *testing.T) {
 	t.Setenv("REX_SESSION", "")
 	t.Setenv("REX_BLOCK", "")
 	var out bytes.Buffer
-	if err := run([]string{"capabilities"}, strings.NewReader(""), &out); err != nil || !strings.Contains(out.String(), "rex-observer-v1") || !strings.Contains(out.String(), "rex-local-open-v1") {
+	if err := run([]string{"capabilities"}, strings.NewReader(""), &out); err != nil || !strings.Contains(out.String(), "rex-observer-v1") || !strings.Contains(out.String(), "rex-local-open-v1") || !strings.Contains(out.String(), "observation-bindings-v1") {
 		t.Fatal("optional feature discovery failed", err)
 	}
 	for _, args := range [][]string{{"rex-watch"}, {"rex-watch", "--plain", "--status"}, {"rex-sources", "--sources", "@ignored"}, {"open"}, {"open", "--plain"}, {"open", "--session", "s", "--sources", "@ignored"}, {"rex-watch", "--sources", "{}"}, {"rex-watch", "--rex-bin", "relative"}} {

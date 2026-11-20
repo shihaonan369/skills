@@ -16,7 +16,7 @@ import (
 // second graph store or an orchestration engine.
 func TestDAGPanelComposesAndBindsObservedState(t *testing.T) {
 	root := setup(t)
-	raw := []byte(`{"version":1,"name":"Caller graph","root":{"kind":"row","children":[{"id":"graph","kind":"dag","dag":{"version":1,"nodes":[{"id":"lead-node","label":"Lead","bind":{"actor":"lead"}},{"id":"work","label":"Reported work","bind":{"task":"1"}},{"id":"missing","label":"Not started","bind":{"actor":"never-seen"}},{"id":"note","label":"Caller annotation"}],"edges":[{"from":"lead-node","to":"work"},{"from":"lead-node","to":"missing"},{"from":"work","to":"note"},{"from":"note","to":"lead-node","style":"return"}]}},{"id":"events","kind":"events"}]}}`)
+	raw := []byte(`{"version":1,"name":"Caller graph","root":{"kind":"row","children":[{"id":"graph","kind":"dag","dag":{"version":1,"nodes":[{"id":"lead-node","label":"Lead","bind":{"actor":"lead"}},{"id":"work","label":"Reported work","bind":{"task":"1"}},{"id":"missing","label":"Not started","bind":{"actor":"never-seen"}},{"id":"note","label":"Caller annotation"}],"edges":[{"from":"lead-node","to":"work"},{"from":"lead-node","to":"missing"},{"from":"work","to":"note"}]}},{"id":"events","kind":"events"}]}}`)
 	if err := SetLayout(root, "s", raw); err != nil {
 		t.Fatal(err)
 	}
@@ -54,6 +54,9 @@ func TestDAGRejectsInvalidGraphsWithoutReplacingLayout(t *testing.T) {
 		strings.Replace(good, `{"id":"b"}`, `{"id":"b","meta":["1","2","3","4","5"]}`, 1),
 		strings.Replace(good, `"to":"b"`, `"to":"missing"`, 1),
 		strings.Replace(good, `"to":"b"`, `"to":"b","style":"fake"`, 1),
+		strings.Replace(good, `"to":"b"`, `"to":"b","style":"return"`, 1),
+		strings.Replace(good, `"edges":[{"from":"a","to":"b"}]`, `"edges":[{"from":"a","to":"b"},{"from":"b","to":"a","style":"return"}]`, 1),
+		strings.Replace(good, `"edges":[{"from":"a","to":"b"}]`, `"edges":[{"from":"a","to":"a","style":"return"}]`, 1),
 		strings.Replace(good, `"to":"b"`, `"to":"b","execute":true`, 1),
 		strings.Replace(good, `"edges":[{"from":"a","to":"b"}]`, `"edges":[{"from":"a","to":"b"},{"from":"a","to":"b"}]`, 1),
 		strings.Replace(good, `"edges":[{"from":"a","to":"b"}]`, `"edges":[{"from":"a","to":"b"},{"from":"b","to":"a"}]`, 1),
@@ -185,7 +188,7 @@ func TestDAGExamplesUnicodeGeometryAndDefensiveRendering(t *testing.T) {
 			}
 		}
 	}
-	raw := []byte(`{"version":1,"root":{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"a","label":"Text 👩‍💻 é\u001b]52;c;secret\u0007\n\u202e","meta":["DATA\u001b[2J"]},{"id":"b","label":"NEXT"},{"id":"c","label":"END"}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"},{"from":"a","to":"c","label":"CROSS-RANK"},{"from":"c","to":"a","style":"return","label":"RETURN"}]}}}`)
+	raw := []byte(`{"version":1,"root":{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"a","label":"Text 👩‍💻 é\u001b]52;c;secret\u0007\n\u202e","meta":["DATA\u001b[2J"]},{"id":"b","label":"NEXT"},{"id":"c","label":"END"}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"c"},{"from":"a","to":"c","label":"CROSS-RANK"}]}}}`)
 	l, err := ParseLayout(raw)
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +196,7 @@ func TestDAGExamplesUnicodeGeometryAndDefensiveRendering(t *testing.T) {
 	s.Layout = l
 	v := Viewer{State: s, Width: 100, Height: 50, Links: map[string]linkFocus{"g": {Node: "a", Scope: 3, Inspect: true}}}
 	frame := v.Render(time.Unix(100, 0))
-	for _, want := range []string{"Text 👩‍💻 é", "NEXT", "END", "CROSS-RANK", "RETURN", "[return]", "DATA"} {
+	for _, want := range []string{"Text 👩‍💻 é", "NEXT", "END", "CROSS-RANK", "DATA"} {
 		if !strings.Contains(frame, want) {
 			t.Fatalf("missing %q\n%s", want, frame)
 		}
@@ -241,7 +244,7 @@ func TestDAGBoundsAndLargeGraphViewport(t *testing.T) {
 		{Version: 1, Nodes: []DAGNode{{ID: "a", Label: strings.Repeat("l", 161)}}},
 		{Version: 1, Nodes: []DAGNode{{ID: "a", Meta: []string{strings.Repeat("m", 2001)}}}},
 		{Version: 1, Nodes: []DAGNode{{ID: "a", Bind: &DAGBinding{Actor: strings.Repeat("x", 121)}}}},
-		{Version: 1, Nodes: []DAGNode{{ID: "a"}}, Edges: []DAGEdge{{From: "a", To: "a", Style: "return", Label: strings.Repeat("l", 161)}}},
+		{Version: 1, Nodes: []DAGNode{{ID: "a"}}, Edges: []DAGEdge{{From: "a", To: "a", Label: strings.Repeat("l", 161)}}},
 	}
 	for _, g := range cases {
 		if _, err := ParseLayout(makeLayout(g)); err == nil {
@@ -265,7 +268,7 @@ func TestDAGBoundsAndLargeGraphViewport(t *testing.T) {
 	s.Layout = l
 	assertDAGFrame(t, (Viewer{State: s, Width: 160, Height: 40, XOffsets: map[string]int{"g": 100000}, Offsets: map[string]int{"g": 100000}}).View(), 160, 40)
 	assertDAGFrame(t, (Viewer{State: s, Width: 160, Height: 40, Links: map[string]linkFocus{"g": {Node: "0", Scope: 3, Inspect: true}}, XOffsets: map[string]int{"g": 100000}, Offsets: map[string]int{"g": 100000}}).View(), 160, 40)
-	g.Edges = append(g.Edges, DAGEdge{From: "63", To: "0", Style: "return"})
+	g.Edges = append(g.Edges, DAGEdge{From: "62", To: "63"})
 	if _, err := ParseLayout(makeLayout(g)); err == nil {
 		t.Fatal("257 edges accepted")
 	}
@@ -278,7 +281,7 @@ func TestDAGBoundsAndLargeGraphViewport(t *testing.T) {
 
 func FuzzDAGLayoutViewer(f *testing.F) {
 	f.Add([]byte(`{"version":1,"root":{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"a"}]}}}`))
-	f.Add([]byte(`{"version":1,"root":{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"a"},{"id":"b"}],"edges":[{"from":"a","to":"b"},{"from":"b","to":"a","style":"return"}]}}}`))
+	f.Add([]byte(`{"version":1,"root":{"id":"g","kind":"dag","dag":{"version":1,"nodes":[{"id":"a"},{"id":"b"}],"edges":[{"from":"a","to":"b","style":"dashed"}]}}}`))
 	f.Fuzz(func(t *testing.T, raw []byte) {
 		l, err := ParseLayout(raw)
 		if err != nil {

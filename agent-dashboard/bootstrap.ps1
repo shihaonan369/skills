@@ -95,6 +95,9 @@ try {
     $destination = Join-Path $directory 'agent-dashboard.exe'
     $existing = Get-ExistingBinary $destination
     if ($null -ne $existing) { Write-Output $existing; return }
+    if (Test-Path -LiteralPath (Join-Path $PSScriptRoot '.prebundled')) {
+        throw 'Prebundled package has no matching executable; acquire a complete package for this platform instead of downloading a fallback.'
+    }
     [void] [IO.Directory]::CreateDirectory($directory)
     $lockPath = Join-Path $directory '.bootstrap.lock'
     $wait = [Diagnostics.Stopwatch]::StartNew()

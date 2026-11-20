@@ -14,8 +14,7 @@ D=./bin/darwin-arm64/agent-dashboard
 
 PowerShell uses `& $D` and `'@examples/dag/fanout.layout.json'`.
 
-The fixture declares two branches, a merge, a cross-rank shortcut and a return
-annotation. Nodes bind `lead` and the three seeded demo task IDs. The task and
+The fixture declares two forward branches, a merge and a cross-rank shortcut. Nodes bind `lead` and the three seeded demo task IDs. The task and
 event Panels display the same isolated synthetic snapshot. No agents are spawned
 and no settings are changed. Keep the DEMO / SYNTHETIC label visible.
 
@@ -29,7 +28,7 @@ The scrollable legend below the graph lists all edge IDs/labels/styles. Edges
 are caller declarations, not measured traffic or parentage. See
 [`../../docs/DAG.md`](../../docs/DAG.md) for the complete contract.
 
-## Parent delegates, child reports back
+## Forward delegation
 
 `delegation.layout.json` is a small, explicitly synthetic alternative:
 
@@ -38,12 +37,11 @@ are caller declarations, not measured traffic or parentage. See
 "$D" tui --session DEMO-layout
 ```
 
-It declares parent → child (`delegate work`) and child → parent (`report results`,
-`style: return`) independently. They have separate paths, packet directions and
-source colors. The report travels upward on its external rail, with an `▲`
-marker; `⇄ paired arrows` indicates both endpoint directions were explicitly
-declared. This is a communication contract, not measured message traffic.
+It declares only parent → child (`delegate work`). Both nodes display their own
+observed state; no reply route or reporting completion is inferred. For live
+work copy the layout privately, bind the child to its actual observed ID and
+publish to that real session. Do not use the demo child ID for a live agent.
 
-For live work copy the layout privately, bind the child to its actual observed
-ID and publish to that real session. Do not use the demo child ID or add a reply
-unless the caller actually declares that reporting relationship.
+All bundled graphs are forward-only. Older `style: return` edges must be removed
+from private layouts before publication; the renderer reports invalid old graphs
+without modifying private files. See the [current DAG contract](../../docs/DAG.md).

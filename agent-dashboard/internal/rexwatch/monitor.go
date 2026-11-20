@@ -23,14 +23,16 @@ type observed struct {
 // Monitor owns one cancellable CLI child per explicitly selected source. Source
 // failures preserve last-known observations but never change a program's state.
 type Monitor struct {
-	mu        sync.RWMutex
-	cancel    context.CancelFunc
-	workers   sync.WaitGroup
-	sources   []observed
-	revision  uint64
-	started   time.Time
-	ready     chan struct{}
-	readyOnce sync.Once
+	mu             sync.RWMutex
+	cancel         context.CancelFunc
+	workers        sync.WaitGroup
+	sources        []observed
+	revision       uint64
+	started        time.Time
+	ready          chan struct{}
+	readyOnce      sync.Once
+	changes        []Change
+	droppedChanges uint64
 }
 
 func NewMonitor(ctx context.Context, client Client, config Config) (*Monitor, error) {
@@ -83,7 +85,7 @@ func (m *Monitor) run(ctx context.Context, client Client, i int) {
 		defer m.mu.Unlock()
 		s := &m.sources[i]
 		s.epoch++ // reject any late callback after the owning observer is stopped
-		s.state.Health, s.state.Error = "stopped", ""
+		m.sourceChange(s, "stopped", "")
 		m.settle(i)
 		m.revision++
 	}()
@@ -94,7 +96,7 @@ func (m *Monitor) run(ctx context.Context, client Client, i int) {
 		s.epoch++
 		epoch := s.epoch
 		s.seq, s.instance, s.baseline = 0, "", false
-		s.state.Health, s.state.Error = "connecting", ""
+		m.sourceChange(s, "connecting", "")
 		source := s.state.Source
 		m.revision++
 		m.mu.Unlock()
@@ -120,7 +122,7 @@ func (m *Monitor) run(ctx context.Context, client Client, i int) {
 		if s.baseline {
 			retry = time.Second
 		}
-		s.state.Health, s.state.Error = "reconnecting", cleanError(err)
+		m.sourceChange(s, "reconnecting", cleanError(err))
 		m.settle(i)
 		m.revision++
 		m.mu.Unlock()
@@ -146,6 +148,11 @@ func (m *Monitor) accept(i int, epoch uint64, raw []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	s := &m.sources[i]
+	wasBaseline := s.baseline
+	var before map[string]Program
+	if msg.Type == "pane" || msg.Type == "snapshot" {
+		before = programMap(s)
+	}
 	if s.epoch != epoch {
 		return errors.New("late message from an old Rex connection")
 	}
@@ -220,6 +227,13 @@ func (m *Monitor) accept(i int, epoch uint64, raw []byte) error {
 			return errors.New("unknown Rex observer message")
 		}
 	}
+	if msg.Type == "snapshot" || msg.Type == "pane" {
+		if !wasBaseline {
+			m.change(Change{Source: s.state.Source.Name, Kind: "baseline", Text: "Baseline established; earlier activity/reconnect gap unknown."})
+		} else {
+			m.recordChanges(s, before)
+		}
+	}
 	s.seq = msg.Seq
 	s.state.LastContact = time.Now()
 	m.revision++
@@ -229,7 +243,7 @@ func (m *Monitor) accept(i int, epoch uint64, raw []byte) error {
 func (m *Monitor) Snapshot() Snapshot {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	result := Snapshot{Revision: m.revision, Started: m.started, Sources: make([]SourceState, 0, len(m.sources))}
+	result := Snapshot{DroppedChanges: m.droppedChanges, Changes: append([]Change(nil), m.changes...), Revision: m.revision, Started: m.started, Sources: make([]SourceState, 0, len(m.sources))}
 	for _, s := range m.sources {
 		copy := s.state
 		copy.Source.Sessions = append([]string(nil), s.state.Source.Sessions...)
@@ -263,4 +277,64 @@ func (m *Monitor) Snapshot() Snapshot {
 		result.Sources = append(result.Sources, copy)
 	}
 	return result
+}
+
+// Called only under the monitor lock, after an entire message is validated.
+func (m *Monitor) change(c Change) {
+	c.Time = time.Now()
+	m.changes = append(m.changes, c)
+	if len(m.changes) > MaxChanges {
+		m.droppedChanges++
+		copy(m.changes, m.changes[len(m.changes)-MaxChanges:])
+		m.changes = m.changes[:MaxChanges]
+	}
+}
+func (m *Monitor) sourceChange(s *observed, health, err string) {
+	if s.state.Health != health || s.state.Error != err {
+		m.change(Change{Source: s.state.Source.Name, Kind: "source", Text: health + " · " + err + " (transport only; not program failure)"})
+	}
+	s.state.Health, s.state.Error = health, err
+}
+func programMap(s *observed) map[string]Program {
+	out := map[string]Program{}
+	for _, p := range s.panes {
+		for _, r := range p.Records {
+			key := ProgramID(s.state.Source.HostID, p.SessionID, p.BlockID, r.ID)
+			out[key] = Program{Key: key, Source: s.state.Source.Name, HostID: s.state.Source.HostID, SessionID: p.SessionID, SessionLabel: p.SessionLabel, BlockID: p.BlockID, BlockLabel: p.BlockLabel, Record: r}
+		}
+	}
+	return out
+}
+func (m *Monitor) recordChanges(s *observed, before map[string]Program) {
+	after := programMap(s)
+	keys := make([]string, 0, len(after)+len(before))
+	for k := range after {
+		keys = append(keys, k)
+	}
+	for k := range before {
+		if _, ok := after[k]; !ok {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		next, present := after[key]
+		old, existed := before[key]
+		kind := "changed"
+		if !present {
+			m.change(Change{Source: s.state.Source.Name, ProgramKey: key, Kind: "removed", Text: "Report removed; program/task outcome unknown."})
+			continue
+		}
+		if !existed {
+			kind = "added"
+		} else if next.Record.ObservationValue() == old.Record.ObservationValue() {
+			continue
+		}
+		r := next.Record
+		text := "[" + r.State + "] " + r.Title + " · " + r.Message
+		if r.Progress != nil {
+			text += fmt.Sprintf(" · progress %d%%", *r.Progress)
+		}
+		m.change(Change{Source: s.state.Source.Name, ProgramKey: key, Kind: kind, Text: text})
+	}
 }

@@ -1,10 +1,6 @@
 package dashboard
 
 import (
-	"encoding/json"
-	"fmt"
-	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -28,49 +24,7 @@ func sessionKey(field string) echoKey   { return echoKey{"session", "", field} }
 // event-buffer indices. Active calls retain their IDs, including parallel calls
 // with the same tool name. No effects or acknowledgement are persisted.
 func echoValues(s *State) map[echoKey]string {
-	out := map[echoKey]string{}
-	calls := map[string][]string{}
-	for id, t := range s.Tools {
-		calls[t.Actor] = append(calls[t.Actor], fmt.Sprintf("%q:%q:%t:%d", id, t.Name, t.Waiting, t.Started))
-	}
-	for id, a := range s.Agents {
-		if a == nil {
-			continue
-		}
-		sort.Strings(calls[id])
-		for field, value := range map[string]string{
-			"status": a.Status, "role": a.Role, "model": a.Model,
-			"tools": strconv.Itoa(a.Tools), "errors": strconv.Itoa(a.Errors),
-			"active": strings.Join(calls[id], "\n"), "progress": s.Progress(id),
-		} {
-			out[actorKey(id, field)] = value
-		}
-	}
-	for id, t := range s.Tasks {
-		out[taskKey(id, "status")] = t.Status
-		out[taskKey(id, "subject")] = t.Subject
-		out[taskKey(id, "owner")] = t.Owner
-		out[taskKey(id, "blocked")] = strings.Join(t.BlockedBy, "\n")
-	}
-	if s.ProgramReports != nil {
-		for _, source := range s.ProgramReports.Sources {
-			out[sourceKey(source.Source.Name)] = source.Health + "\n" + source.Error
-			for _, program := range source.Programs {
-				r := program.Record
-				r.UpdatedAt = "" // report age is not activity
-				if r.EffectiveApp != "" {
-					r.App = r.EffectiveApp
-				}
-				r.EffectiveApp = ""
-				raw, _ := json.Marshal(r)
-				out[programKey(program.Key)] = string(raw)
-			}
-		}
-	}
-	out[sessionKey("title")] = s.Title
-	out[sessionKey("finished")] = strconv.FormatBool(s.Finished)
-	out[sessionKey("progress")] = s.Progress("")
-	return out
+	return observations(s, time.Time{}).Values
 }
 func (e *changeEcho) observe(s *State, at time.Time, baseline, quiet bool) {
 	values := echoValues(s)
@@ -130,60 +84,14 @@ func echoLine(text string, keys []echoKey, echo changeEcho, now time.Time, motio
 	return text
 }
 
-// One key list per existing row: the row count and caller geometry do not depend
-// on whether an effect is on, off, expired or acknowledged.
-func panelEchoKeys(p Panel, s *State) [][]echoKey {
-	agent := func(id string) [][]echoKey {
-		return [][]echoKey{
-			{actorKey(id, "role"), actorKey(id, "status")},
-			{actorKey(id, "model"), actorKey(id, "progress")},
-			{actorKey(id, "tools"), actorKey(id, "errors"), actorKey(id, "active")},
-		}
-	}
-	switch p.Kind {
-	case "programs":
-		return rowKeys(programRows(p, s, time.Time{}))
-	case "sources":
-		return rowKeys(sourceRows(p, s, time.Time{}))
-	case "session":
-		return [][]echoKey{{sessionKey("title")}, nil, {actorKey("lead", "status"), sessionKey("finished")}, {actorKey("lead", "model")}, {sessionKey("progress")}, {actorKey("lead", "active")}}
-	case "agent":
-		if s.Agents[p.Actor] != nil {
-			return agent(p.Actor)
-		}
-	case "agents":
-		out := [][]echoKey{}
-		for _, a := range sortedAgents(s) {
-			if contains(p.Actors, a.ID) {
-				out = append(out, agent(a.ID)...)
-				out = append(out, nil)
-			}
-		}
-		return out
-	case "tasks":
-		out := [][]echoKey{}
-		for _, t := range sortedTasks(s) {
-			if contains(p.TaskIDs, t.ID) {
-				out = append(out, []echoKey{taskKey(t.ID, "status"), taskKey(t.ID, "subject")}, []echoKey{taskKey(t.ID, "owner"), taskKey(t.ID, "blocked")})
-			}
-		}
-		return out
-	}
-	return nil
-}
 func nodeEchoKeys(n DAGNode, s *State) []echoKey {
 	if n.Bind == nil {
 		return nil
 	}
-	if n.Bind.Actor != "" {
-		keys := []echoKey{actorKey(n.Bind.Actor, "status")}
-		if a := s.Agents[n.Bind.Actor]; a != nil && a.Status == "running" {
-			keys = append(keys, actorKey(n.Bind.Actor, "tools"))
-		}
-		return keys
-	}
-	return []echoKey{taskKey(n.Bind.Task, "status")}
+	e, _ := observations(s, time.Time{}).resolve(*n.Bind)
+	return e.Keys
 }
+
 func (v Viewer) quietEcho() bool {
 	return v.MotionOff || v.Help || v.Page != 0 || v.Offsets[v.focus()] > 0
 }
@@ -207,15 +115,15 @@ func appendedEvents(old, next []Event) []Event {
 	return nil // wholesale replacement/empty baseline: do not invent continuity
 }
 func (v *Viewer) anchorEventHistory(next *State) {
-	if next.ProgramReports != nil {
-		return
-	} // buffer 3 is source metadata, not an event log
 	if v.State == nil {
 		return
 	}
-	added := appendedEvents(v.State.Events, next.Events)
-	if v.Page == 2 && v.Offset > 0 {
-		v.Offset = min(v.Offset+len(added), max(0, len(next.Events)-1))
+	beforeView, afterView := observations(v.State, time.Time{}), observations(next, time.Time{})
+	// Rex diagnostic page 3 is still source metadata, not the event panel.
+	if v.Page == 2 && v.Offset > 0 && next.ProgramReports == nil {
+		before, after := beforeView.matchingEvents(Panel{}), afterView.matchingEvents(Panel{})
+		added := appendedEvents(before, after)
+		v.Offset = min(v.Offset+len(added), max(0, len(after)-1))
 	}
 	if v.State.Layout == nil || next.Layout == nil {
 		return
@@ -226,20 +134,22 @@ func (v *Viewer) anchorEventHistory(next *State) {
 	}
 	for _, p := range leaves(next.Layout.Root) {
 		old := oldPanels[p.ID]
-		if p.Kind != "events" || old.Kind != "events" || strings.Join(old.Actors, "\x00") != strings.Join(p.Actors, "\x00") || v.Offsets[p.ID] <= 0 {
+		if p.Kind != "events" || old.Kind != "events" || !sameEventFilter(old, p) || v.Offsets[p.ID] <= 0 {
 			continue
 		}
-		n, total := 0, 0
-		for _, e := range added {
-			if contains(p.Actors, e.Actor) {
-				n++
-			}
-		}
-		for _, e := range next.Events {
-			if contains(p.Actors, e.Actor) {
-				total++
-			}
-		}
-		v.Offsets[p.ID] = min(v.Offsets[p.ID]+n, max(0, total-1))
+		before, after := beforeView.matchingEvents(p), afterView.matchingEvents(p)
+		added := appendedEvents(before, after)
+		v.Offsets[p.ID] = min(v.Offsets[p.ID]+len(added), max(0, len(after)-1))
 	}
+}
+func sameEventFilter(a, b Panel) bool {
+	if strings.Join(a.Actors, "\x00") != strings.Join(b.Actors, "\x00") || strings.Join(a.Sources, "\x00") != strings.Join(b.Sources, "\x00") || strings.Join(a.ProgramIDs, "\x00") != strings.Join(b.ProgramIDs, "\x00") || len(a.Bindings) != len(b.Bindings) {
+		return false
+	}
+	for i := range a.Bindings {
+		if a.Bindings[i] != b.Bindings[i] {
+			return false
+		}
+	}
+	return true
 }

@@ -14,7 +14,8 @@
 
 Viewer-local `link_focus.go` computes declared reachability and an optional
 in-leaf inspector; `echo.go` compares observed field values and decorates rows.
-Neither changes storage, hook ingestion or the version-1 layout schema. Snapshot
+Neither changes hook ingestion or persisted telemetry. The additive typed
+binding fields retain version-1 compatibility for existing layouts. Snapshot
 reads carry a viewer generation so reads started before pause cannot overwrite
 the post-resume baseline. Change/acknowledgement state is not persisted.
 
@@ -97,12 +98,16 @@ that worker. StopFailure records an API error without completing the issue.
 The skill agent runs `bootstrap.sh` (macOS/Linux/WSL) or `bootstrap.ps1` (native
 Windows) before readiness checks. A working existing executable is reused
 without network access or automatic update. Missing executables are acquired
-from the fixed `agent-dashboard-v0.1.0` release in `shihaonan369/skills`; URLs and
+from the fixed reviewed release named in the helpers in `shihaonan369/skills`; URLs and
 version are not caller-configurable. Both the remote manifest's selected hash
 and the actual archive must match the reviewed per-platform pin bundled in
 `bootstrap.sha256`. This protects against later replacement of release assets
 and checksums, but is not code signing, notarization, or a guarantee against
-compromise of the skill source itself.
+compromise of the skill source itself. Platform ZIPs contain a generated
+`.prebundled` marker: they reuse the included executable or fail before network
+access if no matching executable exists. Source main is repinned after publication;
+release-tag source pins can describe the preceding release to avoid a circular
+archive checksum. See README's release pin lifecycle.
 
 The helper checks supported OS/native architecture and downloads with normal
 TLS certificate verification. Download sizes and extracted binary size are
@@ -124,13 +129,13 @@ ZIP utilities, while native Windows uses PowerShell/.NET. Missing tools,
 unsupported platforms, read-only locations, and network/policy failures are
 explicit blockers. First-use network access is separate from the collector,
 which remains local. This does not implement Pi session variables or hooks;
-source-only Rex program observation has a separate capability boundary below.
+optional Rex program observation has a separate capability boundary below.
 
 ## Optional Rex observation and presentation
 
 The full source/version gates, agent procedures and source semantics are in
-[REX.md](REX.md). The stable bootstrap remains pinned to 0.1.0; these optional
-capabilities currently belong to source/development builds, not those assets.
+[REX.md](REX.md). Version 0.2.0 includes these capabilities; unchanged 0.1.0
+assets do not. An existing executable is never upgraded implicitly.
 
 `internal/rexwatch` hides official CLI transport, an embedded local Lua observer,
 source-qualified identity, full-pane snapshot replacement and independent source
@@ -142,12 +147,25 @@ retain old reports and their old instance label, explicitly last-known, until a
 fresh baseline commits. The CLI lacks a documented exposed baseline watermark;
 60-second reconciliation bounds startup gaps rather than claiming losslessness.
 
-`dashboard.ProgramState` binds the in-memory observation to caller-owned
-`programs`/`sources` panels without manufacturing a Claude session, lead, task,
-or completion. Viewer loading is injected independently of rendering/motion.
+`dashboard.ProgramState` retains a separate in-memory Rex snapshot without
+manufacturing a Claude session, lead, task or completion. `observations.go` and
+`observations_rex.go` adapt Claude and Rex into one typed observation view.
+Single/list record panels, DAG state, relationship details, filters and change
+keys share its binding resolver; they do not each implement Rex. A frame builds
+the view once, leaving persisted state untouched. Explicit program projections
+stay labelled as program reports. The small interface and exact semantics are
+in [OBSERVATIONS.md](OBSERVATIONS.md).
+
+`Monitor` also records bounded local report/source differences after validated
+snapshot replacement. Initial/reconnect baselines mark unknown gaps, clock-only
+changes stay silent, and discarded-entry counts are explicit. This is not a
+lossless server history or reconstructed agent lifecycle. Viewer loading is
+injected independently of rendering/motion.
 Program values/source health participate in change echoes; report ages and source
 contact timestamps do not. Diagnostic buffers are program/source views in this
-mode; source scrolling never uses Claude event-history anchoring.
+mode. Source scrolling is independent of history anchoring; both Claude event
+panels and explicitly composed Rex observation-history panels retain their
+filtered reading anchors through the same normalization seam.
 
 `dashboard.OpenViewer` is the independent, optional local launch/reuse boundary.
 It verifies IPC peer credentials and live context before executing a local path;

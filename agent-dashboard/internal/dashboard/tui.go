@@ -193,7 +193,7 @@ func (v Viewer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "x":
 			v.Echo.changed = nil
 			v.Echo.until = time.Time{}
-		case "[", "]", "c", "f", "r", "i":
+		case "[", "]", "c", "f", "i":
 			v.linkKey(m.String())
 		case "?":
 			v.Help = !v.Help
@@ -331,6 +331,11 @@ func (v Viewer) Render(now time.Time) string {
 	if s == nil {
 		return clip("Agent Dashboard · waiting for snapshot: "+v.Error, w)
 	}
+	// Build one immutable normalized view per frame, shared by every panel,
+	// DAG node, binding inspector and echo-key lookup.
+	frameState := *s
+	frameState.observation = observations(s, now)
+	s = &frameState
 	label := "OBSERVED TELEMETRY"
 	if s.Demo {
 		label = "DEMO · SYNTHETIC · NOT REAL AGENTS"
@@ -367,7 +372,7 @@ func (v Viewer) Render(now time.Time) string {
 			bufferHelp = "1: caller canvas; 2/3: program/source inspectors"
 			closeHelp = "q / Ctrl-C: stop subscriptions; observed programs continue"
 		}
-		lines = append(lines, fit([]string{"Caller defines layout; dashboard supplies panels only.", "Tab / Shift-Tab (j/k): focus next/previous panel", "↑↓ / PgUp/PgDn: scroll; ←→: pan DAG; Home: reset", bufferHelp, "DAG [ / ]: select node; c: clear; f: focus scope", "DAG r: include/exclude return; i: relation sidebar", "▸ changed row (1.2s); · static change; x: clear", "p: pause viewer + animation; a: toggle motion; ?: help", "Flow packets decorate declared edges, not measured traffic.", closeHelp, "Layouts bind observed IDs; unobserved bindings stay unknown."}, w, bodyH)...)
+		lines = append(lines, fit([]string{"Caller defines layout; dashboard supplies panels only.", "Tab / Shift-Tab (j/k): focus next/previous panel", "↑↓ / PgUp/PgDn: scroll; ←→: pan DAG; Home: reset", bufferHelp, "DAG [ / ]: select node; c: clear; f: focus scope", "DAG i: relation sidebar (declared relationships)", "▸ changed row (1.2s); · static change; x: clear", "p: pause viewer + animation; a: toggle motion; ?: help", "Flow packets decorate declared edges, not measured traffic.", closeHelp, "Layouts bind observed IDs; unobserved bindings stay unknown."}, w, bodyH)...)
 	} else if v.Error != "" {
 		lines = append(lines, fit([]string{"Snapshot read error · last view retained", v.Error}, w, bodyH)...)
 	} else {

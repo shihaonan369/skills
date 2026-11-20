@@ -1,11 +1,98 @@
-# Validation matrix · source 0.2.0-dev
+# Validation matrix · 0.2.0
 
-Latest checks recorded **2026-11-19 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
+Latest checks recorded **2026-11-20 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
 Historical sections below retain their original scope.
 Local build toolchain: **Go 1.27.4**, archive SHA-256 checked before extraction
 into ignored `.build-tools/go/`; no system-wide toolchain/runtime installed.
 Claude Code used for historical integration checks: **2.1.312**.
 Distribution builds are unsigned; release assets are not signed/notarized packages.
+
+## Version 0.2.0 release preparation (2026-11-20)
+
+The user authorized commit, push and release. Version 0.2.0 includes the optional
+Rex adapters, shared typed observations and forward-only DAG contract. This
+section records pre-publication checks; the older sections retain their dated
+source/development scope, including statements that no release occurred then.
+
+| Scope | Result / exact boundary |
+| --- | --- |
+| Go regression | `go test -count=1 -race -cover -json ./...`: **97 top-level tests + 56 subtests passed**, with **2 conditional skips**. `go vet ./...` passed; the opt-in official Rex Lua contract also passed separately with synthetic API data, without submitting telemetry |
+| Coverage | Dashboard **90.9%**, CLI **71.7%**, Rex observer **88.7%**, packager **25.3%** |
+| Bootstrap | **20 POSIX + 14 PowerShell tests passed**. Both helpers reject an incomplete prebundled package before network access and still reuse its existing binary offline. PowerShell ran on macOS, not native Windows or PowerShell 5.1 |
+| Native PTY | **4 synthetic macOS runs**: delegation with q and Ctrl-C, fanout effects/controls/resize, and all Rex panel shapes through a synthetic CLI child. Terminal restoration, retained collection and child reaping passed. No new real-Claude or real-Rex telemetry acceptance is claimed |
+| Packaging | Six **0.2.0** binaries/ZIPs built in an isolated ignored workspace. All **12** local and **6** archive-manifest hashes verified. Each archive includes exactly one platform binary, the generated `.prebundled` marker, both helpers, observations documentation and **17 forward-only JSON examples**; no developer/runtime scripts or legacy implementation are shipped |
+| Native package | Extracted macOS arm64 package passed version/capability discovery, offline bootstrap, public CLI validation of all **17** examples and isolated synthetic plain rendering |
+| Publication boundary | The release ships six platform ZIPs and archive-only `SHA256SUMS`. Source-main acquisition pins are updated only after public downloads match reviewed local artifacts. A package never downloads a fallback; release tags/ZIPs retain preceding source pins to avoid a self-referential archive checksum (README → Release pin lifecycle) |
+
+Existing installed executables, Claude settings/hooks, private layouts, Rex
+configuration and remote hosts were not changed. Public 0.1.0 assets are retained.
+Only macOS arm64 received runtime checks; macOS amd64, Linux and Windows are
+**cross-build-only**, not verified runtime targets. Builds remain unsigned.
+
+## Forward-only DAG simplification (2026-11-20)
+
+The current native DAG accepts only forward acyclic edges (`solid` / `dashed`).
+Reverse/return routes, paired-arrow indicators, upward flow animation, the
+return-traversal preference and its `r` control are removed. All edges contribute
+to ranking; opposite pairs, self-edges and other cycles are rejected. Retired
+`style: return` edges receive an explicit validation/migration diagnostic rather
+than silent deletion or reinterpretation. Nodes still use the shared typed
+Claude/Rex binding resolver, including literal returned/last-known state.
+
+| Scope | Result / exact boundary |
+| --- | --- |
+| Go regression | `go test -count=1 -race -cover -json ./...`: **97 top-level tests + 56 subtests passed**, with **2 conditional skips** (helper parent entrypoint and opt-in official Lua contract). `go vet ./...` passed |
+| Coverage | Dashboard **90.9%**, CLI **71.7%**, Rex observer **88.7%**, packager **24.2%**. The preceding shared-binding section records its earlier source snapshot, not the current percentage |
+| Publication / saved layouts | Public layout/CLI tests reject the retired style even on a forward edge, reject former cycle/self-edge escapes, preserve the last valid published layout, and diagnose older persisted graphs without rewriting caller state |
+| Examples / semantics | All **17** bundled JSON layouts and graph companions pass the public layout contract and render without reverse indicators. AI Hero delegation and findings remain forward; worker-to-lead and verdict-to-lead back edges are gone. Forward motion, link focus, unknown state, native/Rex typed bindings and change echoes retain regression coverage; the retired key has no hidden effect |
+| Native macOS PTY | **4 explicitly synthetic runs**: forward delegation with q and Ctrl-C; fanout with effects, relationship controls, task echoes, motion-off/resume and resize; Rex all-panel observer with Ctrl-C using a labelled synthetic CLI child. Exit/terminal restoration passed, Claude collection stayed enabled, and the owned Rex child was reaped. These are not new real-Claude or real-Rex telemetry acceptance |
+| PTY readiness | The developer harness waits for bounded actual startup/effect output; it no longer assumes a fixed window will catch a decorative head on a short forward edge |
+| Distribution | Six **0.2.0-dev** platform binaries/ZIPs built in an isolated ignored repository workspace. All **12** local and **6** release-manifest hashes and all bundled forward-only examples verified. The packaged native binary passed capability discovery, isolated synthetic preview and deprecated-style rejection. Other OS/architectures remain **cross-build-only** |
+
+The public 0.1.0 release/pins and existing installed binaries are unchanged. No
+private layout, application settings, hooks, remote host, running agent, commit,
+push or deployment was changed/performed. The unshipped earlier Python prototype
+remains historical reference, not the native runtime. Older validation sections
+below preserve dated evidence; reverse-flow capabilities there are **not** part
+of the current native graph contract. See [DAG.md](DAG.md) for migration details.
+
+## Shared observation bindings across panel shapes (2026-11-20)
+
+This source-only update adds `observation-bindings-v1`. It does not publish a
+release or change the immutable 0.1.0 bootstrap pins. No application settings,
+hooks, real Claude API calls, observed programs, remote files or Rex configuration
+were changed. No commit/push/deployment was performed for this update.
+
+| Scope | Result / exact boundary |
+| --- | --- |
+| Go regression | `go test -count=1 -race -cover -json ./...`: **95 top-level tests + 39 subtests passed**, **2 top-level skips** (native helper parent entrypoint and opt-in official Lua test). `go vet ./...` passed. The native helper is exercised as a real child by other tests; the opt-in Lua test also passed separately |
+| Coverage | Dashboard **91.2%**, CLI **71.7%**, Rex observer **88.7%**, packager **24.2%**; build-version constants have no executable statements |
+| Shared view / binding seam | Public `ParseLayout`, `ProgramState`, `Viewer` and real headless Bubble Tea lifecycle cover one program key across session/card/list/work-report/DAG shapes, common relationship resolution, exact source filtering, typed namespaces, unknown/deleted records, last-known state without activity animation, explicit zero vs unknown progress, inert text, bounded cell geometry, and shared echoes/expiry. Original Claude layout/lifecycle/DAG/echo regression remains passing |
+| Selection honesty | Rex does not populate Claude `Agents`/`Tasks`/`Tools`/`Events`, lead/session or completion. Native list panels require explicit typed program selection. Duplicate shorthand filter IDs do not duplicate records; ambiguous bindings are rejected; program `done` does not receive a native success check |
+| Local history | Public `Monitor.Snapshot` through the CLI executor seam covers silent timestamp/heartbeat updates, complete-record changes, child removal with unknown outcome, detached snapshots, reconnect-baseline gap markers without fabricated replay, unchanged reconciliation, the 500-entry bound and exact discarded-entry count. Viewer event panels preserve filtered reading anchors; Rex diagnostic source scrolling remains separate |
+| Official Lua runtime | Existing opt-in read-only Lua contract passed against the installed official Rex CLI, using only synthetic locally replaced API functions. No synthetic report was submitted to a Rex server; no new real-host cross-source acceptance is claimed |
+| Native Rex-mode PTY | **3 macOS POSIX PTY runs with an explicitly synthetic CLI process**: current native binary with q and Ctrl-C, plus isolated packaged native binary with Ctrl-C. Every run renders all panel kinds from the shared caller template, consumes a live structured report change, shows record/DAG state and echo output, exercises keys/resize, restores terminal settings, and confirms the owned subscription PID is reaped. This is product process/TUI integration, **not a new real Rex program-telemetry acceptance** |
+| Native Claude-mode PTY regression | **3 macOS POSIX PTY runs**, all labelled synthetic: ordinary canvas with q, ordinary canvas with Ctrl-C, and fanout DAG with effects, relationship controls, task echoes, motion-off/resume, navigation and resize. Terminal restoration and collection retention passed; no real Claude invocation was made |
+| Bootstrap regression | **19 POSIX + 13 PowerShell tests passed**. PowerShell runs on macOS, not native Windows/PowerShell 5.1 validation. No download hashes or release assets were regenerated |
+| Distribution | Six **0.2.0-dev** binaries/ZIPs cross-built in an isolated ignored repository workspace, leaving existing local `bin/` assets untouched. All archives contain shared-observation docs and the binding template, exactly one platform binary, and unchanged bootstrap pins; developer tests/Go/Lua/Python/legacy files are excluded. All **12** local-manifest and **6** archive-manifest hashes verified; native packaged capability discovery and Rex-mode synthetic PTY passed |
+
+All non-Mac-arm64 targets remain **cross-build-only**. These checks do not
+validate native Linux/Windows execution, full Pi lifecycle/tools/tasks, or
+lossless history/fixed freshness guarantees. Review feedback covered the design;
+no independent full code/security audit is claimed.
+
+Developer-only PTY reproduction, from the skill directory after building a
+native binary at the chosen path:
+
+```sh
+python3 tests/pty_rex_smoke.py target/observations-validation-agent-dashboard
+python3 tests/pty_rex_smoke.py target/observations-validation-agent-dashboard --ctrl-c
+```
+
+The script uses a labelled local synthetic CLI executable and temporary
+source/layout files under ignored `target/`; it never selects real hosts. It
+is excluded from product ZIPs. The shared binding and local-history contracts
+are in [OBSERVATIONS.md](OBSERVATIONS.md).
 
 ## Optional Rex adapters (2026-11-19)
 

@@ -29,12 +29,11 @@ The primary layouts now combine the **native DAG and detail Panels in one TUI**:
   events and caller context below. Red/green nodes bind reported tasks, not tools.
 - Review: session header; fan-out/merge graph beside Standards/Spec actor cards
   and reported review items; exact-ID-filtered events and caller context below.
-  Each axis has two independent communication arrows: lead → worker delegates
-  the pinned check; worker → lead reports results on an explicit return rail.
-  Worker → verdict findings aggregation remains a separate declaration.
+  Each axis has forward arrows: lead → worker delegates the pinned check;
+  worker → verdict declares findings aggregation.
   The verdict node is unbound caller annotation, never invented execution state.
 - No-spec review: removes the Spec graph node, actor card, edges and event
-  binding together, including the Spec reporting return edge. The layout does
+  binding together, including its forward findings edge. The layout does
   not decide whether a spec exists.
 
 For these full compositions, **140 columns ×56 rows or larger is recommended**.
@@ -99,11 +98,9 @@ $D = '.\bin\windows-amd64\agent-dashboard.exe'
 If the caller switches to review or drops the Spec axis, publish its new private
 layout rather than launching a different renderer. Titles/edges declare intended
 structure; they are not proof of measured parentage, traffic or successful tests.
-Reply rails keep an upward direction marker and animate toward the parent;
-`⇄ paired arrows` identifies explicit opposite endpoint pairs. These are declared
-communication channels, not measured message traffic or a guarantee that a
-worker has reported. Do not infer reverse edges for tasks/agents without a
-caller-declared reporting contract.
+The graph shows forward delegation and findings aggregation only. Worker cards
+and event panels expose observed status separately; no worker → lead reply path
+or result delivery is inferred. Graph edits never create a reporting contract.
 
 A completed red/green task means only the reported task is completed. A returned
 review worker is not a successful verdict. `finish` remains an explicit caller

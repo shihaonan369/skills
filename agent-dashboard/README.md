@@ -4,16 +4,17 @@
 
 A terminal-independent, Claude Code-first TUI module with self-contained
 executables. It supplies **Panels** (`session`, `agent`, `agents`, `tasks`,
-`events`, `text`, `dag`) and `row`/`column` composition. Source builds also add
-optional Rex `programs`/`sources` panels. The calling skill/agent owns
+`events`, `text`, `dag`) and `row`/`column` composition. Version 0.2.0 also adds
+optional Rex `programs`/`sources` inspectors and shared typed bindings across
+all record panels and DAGs. The calling skill/agent owns
 layout, role assignment and workflow; hooks supply last-observed real telemetry.
 There is no screenshot workflow template or hard-coded AI Hero pipeline.
 
-**Source/release boundary:** source builds identify as **0.2.0-dev**. New Rex
-capabilities are implemented here but are **not** in published 0.1.0 assets.
-Bootstrap continues to verify immutable 0.1.0 pins and does not update existing
-binaries. See [Optional Rex integration](#optional-rex-integration) before using
-these source-only commands; no new release is implied by this checkout.
+**Version 0.2.0** adds optional Rex adapters, shared observation bindings and
+forward-only DAGs. Version 0.1.0 assets remain unchanged and lack the Rex
+capabilities. Bootstrap reuses existing executables without upgrading them;
+check `capabilities` before using [Optional Rex integration](#optional-rex-integration).
+Remove retired `style: return` edges explicitly from caller layouts when migrating.
 
 ## First use
 
@@ -25,16 +26,19 @@ source checkout no longer requires the user to download or compile a binary.
    Windows PowerShell. The helper selects the host OS/native architecture,
    including Apple Silicon and Windows ARM64 under a translated shell.
 2. An existing nonempty executable is reused without network access. Otherwise,
-   the helper acquires release **0.1.0** from this repository's GitHub Releases,
+   a source checkout acquires the reviewed release pinned in its helper and
+   `bootstrap.sha256` from this repository's GitHub Releases,
    verifies the archive against bundled `bootstrap.sha256` and the published
    checksum manifest, and installs only the matching binary under `bin/`.
+   Prebundled ZIPs use their included executable only: a missing/mismatched binary
+   is an incomplete/wrong-platform package, never permission for a fallback download.
 3. The agent runs `doctor`. Before changing Claude settings/hooks, it asks for
    approval; once approved, the agent runs `install` and rechecks configuration.
    Start a fresh Claude session after the hook change, then invoke the skill
    again. Existing sessions are not assumed to have reloaded hooks.
 4. The agent attaches the actual Claude session and supplies the caller's
    composition. It opens the viewer through an available authorized terminal
-   adapter, or reports the normal viewer command. A matching source build can
+   adapter, or reports the normal viewer command. Version 0.2.0 can
    create/reuse a right-side Rex pane automatically while preserving focus.
 
 No global PATH change, package manager, compiler, Python, or Node installation
@@ -55,8 +59,8 @@ process is dead. Windows uses an OS sharing lock; its empty lock file may remain
 and does not block later runs.
 
 Claude hooks remain **Claude Code-specific**; discovering this skill in Pi does
-not supply Claude variables or full Pi lifecycle/tools/tasks. A matching source
-build can observe basic Pi **program reports through Rex**, without installing
+not supply Claude variables or full Pi lifecycle/tools/tasks. Version 0.2.0
+can observe basic Pi **program reports through Rex**, without installing
 Claude hooks. That separate boundary is described under Optional Rex integration.
 
 ## Download
@@ -69,21 +73,21 @@ Packages are available for **macOS, Windows, and Linux**, each in **x64 and ARM6
 Each ZIP contains this skill directory, one matching executable, docs, examples,
 and third-party notices. No end-user compilation or extra runtime is required.
 
-Choose the uploaded `agent-dashboard-0.1.0-<os>-<arch>.zip` asset, **not** the
+Choose the uploaded `agent-dashboard-0.2.0-<os>-<arch>.zip` asset, **not** the
 automatic “Source code” archives. Source checkouts omit `bin/` and `target/`.
 Extract to a permanent directory before installing hooks; keep existing unrelated
 skills intact. Platform verification and unsigned-build caveats are covered under
 [Safety, distribution and limitations](#safety-distribution-and-limitations).
 
-### Version 0.1.0
+### Version 0.2.0
 
 | Operating system | x64 / AMD64 | ARM64 |
 | --- | --- | --- |
-| macOS | [Intel Mac ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.1.0/agent-dashboard-0.1.0-darwin-amd64.zip) | [Apple Silicon ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.1.0/agent-dashboard-0.1.0-darwin-arm64.zip) |
-| Windows | [Windows x64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.1.0/agent-dashboard-0.1.0-windows-amd64.zip) | [Windows ARM64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.1.0/agent-dashboard-0.1.0-windows-arm64.zip) |
-| Linux | [Linux x64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.1.0/agent-dashboard-0.1.0-linux-amd64.zip) | [Linux ARM64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.1.0/agent-dashboard-0.1.0-linux-arm64.zip) |
+| macOS | [Intel Mac ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/agent-dashboard-0.2.0-darwin-amd64.zip) | [Apple Silicon ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/agent-dashboard-0.2.0-darwin-arm64.zip) |
+| Windows | [Windows x64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/agent-dashboard-0.2.0-windows-amd64.zip) | [Windows ARM64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/agent-dashboard-0.2.0-windows-arm64.zip) |
+| Linux | [Linux x64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/agent-dashboard-0.2.0-linux-amd64.zip) | [Linux ARM64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/agent-dashboard-0.2.0-linux-arm64.zip) |
 
-[SHA-256 checksums](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.1.0/SHA256SUMS)
+[SHA-256 checksums](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/SHA256SUMS)
 cover the six downloadable ZIPs. Before extracting, compare the downloaded
 archive's digest with `SHA256SUMS`:
 
@@ -136,7 +140,7 @@ Then ask your existing workflow to call `/agent-dashboard` and supply its layout
 The caller should keep using its existing skills, not switch to a dashboard-owned
 process. The skill uses the actual substituted Claude session ID, opts in, and
 prints a viewer command to run in another terminal pane/tab/window on that host.
-There is no separate orchestrator. Matching source builds optionally support
+There is no separate orchestrator. Version 0.2.0 optionally supports
 `open --session '<Claude-ID>'` for a verified Rex split/reuse; normal `tui` remains
 terminal-independent.
 
@@ -172,7 +176,7 @@ and shows a **session inspector**, not a guessed workflow graph.
 
 See **[Panel contract](docs/PANELS.md)** for the JSON interface and keyboard
 behavior. **[Native DAG Panel](docs/DAG.md)** adds caller-declared graphs,
-fan-out/merge, cross-rank edges and return annotations inside the same TUI;
+forward-only fan-out/merge and cross-rank edges inside the same TUI;
 no Python or separate viewer is required. **[AI Hero example](examples/ai-hero/README.md)** demonstrates two
 different caller-owned arrangements, using the locally inspected `/tdd` and
 `/code-review` skills without modifying or invoking them. These examples ship
@@ -206,7 +210,8 @@ turns collection off for that session while retaining its last snapshot.
 
 ## Optional Rex integration
 
-Two independent adapters are available in source builds, gated by
+Two independent adapters and a shared record-binding capability are available
+in version 0.2.0, gated by
 `capabilities` (published **0.1.0 does not have them**):
 
 - `rex-local-open-v1`: `open --session '<Claude-ID>'` creates/reuses an owned
@@ -217,6 +222,11 @@ Two independent adapters are available in source builds, gated by
   persistent official CLI connections, with events, reconnects and last-known
   source health. `open --sources @private.json --layout @layout.json` presents
   that observer using the same optional launcher.
+- `observation-bindings-v1`: one typed binding interface lets `session`,
+  `agent`/`agents`, `tasks`, `events` and DAG nodes display Rex observations.
+  Cards/work rows require explicit program selection and retain program-report
+  labels; events are bounded local observation changes with baseline/gap
+  boundaries. See [shared observations and bindings](docs/OBSERVATIONS.md).
 
 The agent performs source resolution, private file creation, opening and
 verification. No remote deployment, hooks/config edits, screen parsing, agent
@@ -229,8 +239,8 @@ fabricated merged agent model.
 Read **[Rex adapter contract and agent procedure](docs/REX.md)** for exact
 commands, opt-in scopes, capability/distribution gates, ownership and ambiguous
 launch recovery. The **[small caller example](examples/rex/README.md)** supplies
-presentation only; the caller can use any arrangement of `programs`/`sources`
-panels. `2`/`3` show program/source diagnostics in this mode.
+presentation only; the caller can arrange every panel shape with explicit
+typed bindings, including program-bound DAGs and observation history. `2`/`3` show program/source diagnostics in this mode.
 
 ## Synthetic demonstration
 
@@ -255,15 +265,16 @@ or Claude run. A real Claude smoke test is reported separately in validation.
 This composes a native DAG with task/event Panels using isolated synthetic data.
 Tab focuses panels with a heavy highlighted frame; up/down scroll, left/right
 pan the DAG, Home resets its viewport. `[` / `]` select a DAG node, `f` changes
-relationship scope, `r` toggles return participation, `i` opens optional relation
+relationship scope, `i` opens optional relation
 details, and `c` clears selection. These inspect declarations, not traffic.
 Observed field changes briefly emphasize only the affected row, with a static
 marker/summary retained after the effect; `x` clears that local summary. See the
 [Panel contract](docs/PANELS.md#observed-change-echoes) for baseline/history rules.
 Declared edges have decorative moving
 packets and short trails (not measured traffic); `a` toggles motion, `p` freezes
-the displayed snapshot and animation while hooks continue collecting. Embed the `dag` object into any caller layout; ordinary cycles are
-rejected, and explicit return annotations do not execute a loop.
+the displayed snapshot and animation while hooks continue collecting. Embed the
+`dag` object into any caller layout; all edges participate in an acyclic forward
+graph. Retired `style: return` edges are rejected rather than silently rewritten.
 
 ## Safety, distribution and limitations
 
@@ -300,7 +311,7 @@ go run ./cmd/package
 ```
 
 Packaging cross-builds six pure-Go binaries (`CGO_ENABLED=0`), identifies them
-using `internal/buildinfo.Version` (currently `0.2.0-dev`), writes per-platform zips and `target/SHA256SUMS`, and collects dependency license notices. Build output
+using `internal/buildinfo.Version` (currently `0.2.0`), writes per-platform zips and `target/SHA256SUMS`, and collects dependency license notices. Build output
 (`bin/`, `target/`, toolchain) stays out of Git. Publish the six ZIPs and
 `target/release/SHA256SUMS` as GitHub Release assets; do not substitute automatic
 source archives. `target/SHA256SUMS` is the separate local-build manifest covering
@@ -326,11 +337,23 @@ architecture variables; they are not native Windows or PowerShell 5.1 runtime
 validation. Python/PowerShell developer tooling is not shipped as a product
 runtime dependency.
 
-`bootstrap.sha256` pins the six **published** 0.1.0 archive hashes; local package
-rebuilds deliberately do not change those pins. For a future release, update both
-bootstrap version constants and these pins from reviewed release artifacts
-before distributing new source instructions. Never regenerate trusted pins from
-an unverified download during first use or silently retarget to `latest`.
+### Release pin lifecycle
+
+A platform ZIP cannot include its own trusted archive hash. Build, validate and
+publish the six versioned ZIPs plus their archive-only `SHA256SUMS` first. Then
+verify public downloads against those local artifacts and commit the new
+bootstrap version constants and reviewed pins to source main in a follow-up.
+Local packaging never regenerates trusted pins or overwrites a published release.
+Release tags/ZIPs retain the preceding source-acquisition pins; the generated
+`.prebundled` marker ensures platform packages use only their matching included
+binary and fail if it is missing, rather than downloading an older fallback.
+For a fresh source checkout with current acquisition pins, use source main;
+a tag's source archive is not the ready-to-run platform distribution.
+
+Existing binaries are still reused offline, not upgraded. Obtain approval for
+replacing an installed skill/binary and preserve unrelated skills/settings.
+Never derive first-use pins from an unverified download or silently retarget
+to `latest`. Old tags and assets remain untouched.
 
 After publishing a release, `python3 tests/release_smoke.py` anonymously downloads
 all six ZIPs, checks their release hashes/package contents, and smoke-runs the

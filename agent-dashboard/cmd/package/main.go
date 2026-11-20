@@ -98,7 +98,7 @@ func build() error {
 }
 
 func packageFiles(binary string) ([]string, error) {
-	files := []string{"SKILL.md", "README.md", "bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256", "docs/ARCHITECTURE.md", "docs/VALIDATION.md", "docs/PANELS.md", "docs/DAG.md", "docs/REX.md", binary, "LICENSES.txt"}
+	files := []string{"SKILL.md", "README.md", "bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256", "docs/ARCHITECTURE.md", "docs/VALIDATION.md", "docs/PANELS.md", "docs/DAG.md", "docs/REX.md", "docs/OBSERVATIONS.md", binary, "LICENSES.txt"}
 	err := filepath.WalkDir("examples", func(p string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -135,6 +135,15 @@ func archive(path string, files []string) (err error) {
 		}
 	}()
 	z := zip.NewWriter(f)
+	// A ZIP cannot embed its own reviewed archive hash. Platform packages are
+	// offline-ready and must not fall back to earlier source bootstrap pins.
+	marker, e := z.Create("agent-dashboard/.prebundled")
+	if e != nil {
+		return e
+	}
+	if _, e := io.WriteString(marker, "Use the included platform executable; acquire a complete matching package if it is missing.\n"); e != nil {
+		return e
+	}
 	for _, p := range files {
 		in, e := os.Open(p)
 		if e != nil {

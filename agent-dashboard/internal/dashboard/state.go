@@ -59,6 +59,7 @@ type Event struct {
 	Text  string `json:"text"`
 }
 type State struct {
+	observation    *observationView
 	ProgramReports *rx.Snapshot      `json:"program_reports,omitempty"`
 	Layout         *Layout           `json:"layout,omitempty"`
 	Revision       uint64            `json:"revision"`

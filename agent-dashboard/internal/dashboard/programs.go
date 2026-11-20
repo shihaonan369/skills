@@ -9,12 +9,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// ProgramState deliberately leaves Claude lifecycle collections empty. A Rex
-// report does not create a lead, worker, task, tool call, or completion event.
 func programInspector(observations *rx.Snapshot) *Layout {
 	return &Layout{Version: 1, Name: "Rex observation inspector", Root: Panel{Kind: "column", Children: []Panel{{ID: "source-inspector", Kind: "sources", Size: min(15, 3+4*len(observations.Sources)), Title: "Source inspector"}, {ID: "program-inspector", Kind: "programs", Title: "Program inspector"}}}}
 }
 
+// ProgramState retains typed Rex observations without creating Claude telemetry.
 func ProgramState(observations rx.Snapshot, layout *Layout) *State {
 	if layout == nil {
 		layout = programInspector(&observations)
@@ -84,56 +83,7 @@ func programRows(p Panel, s *State, now time.Time) []reportRow {
 				continue
 			}
 			count++
-			r := program.Record
-			app := r.EffectiveApp
-			if app == "" {
-				app = r.App
-			}
-			location := program.SessionLabel
-			if location == "" {
-				location = program.SessionID
-			}
-			shortBlock := program.BlockID
-			if len(shortBlock) > 8 {
-				shortBlock = shortBlock[len(shortBlock)-8:]
-			}
-			block := program.BlockLabel
-			if block == "" {
-				block = program.BlockID
-			} else {
-				block += "#" + shortBlock
-			}
-			id := r.ID
-			if id == "" {
-				id = "root"
-			}
-			progress := "unknown"
-			if r.Progress != nil {
-				progress = fmt.Sprintf("%d%%", *r.Progress)
-			}
-			details := []string{"progress " + progress, "report " + reportAge(r.UpdatedAt, now)}
-			if r.Kind != "" {
-				details = append(details, r.Kind)
-			}
-			if r.Title != "" {
-				details = append(details, r.Title)
-			}
-			if r.Message != "" {
-				details = append(details, r.Message)
-			}
-			keys := []echoKey{programKey(program.Key)}
-			if p.Compact {
-				if r.Progress == nil {
-					progress = "?"
-				}
-				prefix := source.Source.Name + " "
-				if source.Health != "online" {
-					prefix += "[" + freshness + "] "
-				}
-				out = append(out, reportRow{text: Clean(prefix+"["+unknown(r.State)+"] "+unknown(app)+" "+progress+" · "+location+" / "+block+" ("+id+")", 800), keys: append(keys, sourceKey(source.Source.Name))})
-			} else {
-				out = append(out, reportRow{text: Clean("["+unknown(r.State)+"] "+unknown(app)+" · "+location+" / "+block+" ("+id+")", 800), keys: keys}, reportRow{text: Clean(strings.Join(details, " · "), 1000), keys: keys})
-			}
+			out = append(out, programReportRows(program, source, p.Compact, now)...)
 		}
 		if count == 0 {
 			out = append(out, reportRow{text: Clean(source.Source.Name, 80) + " · " + freshness + " · no matching program reports; state/progress unknown."})
@@ -186,5 +136,62 @@ func rowKeys(rows []reportRow) [][]echoKey {
 	}
 	return out
 }
-func programData(p Panel, s *State, now time.Time) []string { return rowText(programRows(p, s, now)) }
-func sourceData(p Panel, s *State, now time.Time) []string  { return rowText(sourceRows(p, s, now)) }
+
+func programReportRows(program rx.Program, source rx.SourceState, compact bool, now time.Time) []reportRow {
+	out := []reportRow{}
+	freshness := "live transport"
+	if source.Health != "online" {
+		freshness = "LAST KNOWN / " + Clean(source.Health, 40)
+	}
+	r := program.Record
+	app := r.EffectiveApp
+	if app == "" {
+		app = r.App
+	}
+	location := program.SessionLabel
+	if location == "" {
+		location = program.SessionID
+	}
+	shortBlock := program.BlockID
+	if len(shortBlock) > 8 {
+		shortBlock = shortBlock[len(shortBlock)-8:]
+	}
+	block := program.BlockLabel
+	if block == "" {
+		block = program.BlockID
+	} else {
+		block += "#" + shortBlock
+	}
+	id := r.ID
+	if id == "" {
+		id = "root"
+	}
+	progress := "unknown"
+	if r.Progress != nil {
+		progress = fmt.Sprintf("%d%%", *r.Progress)
+	}
+	details := []string{"progress " + progress, "report " + reportAge(r.UpdatedAt, now)}
+	if r.Kind != "" {
+		details = append(details, r.Kind)
+	}
+	if r.Title != "" {
+		details = append(details, r.Title)
+	}
+	if r.Message != "" {
+		details = append(details, r.Message)
+	}
+	keys := []echoKey{programKey(program.Key)}
+	if compact {
+		if r.Progress == nil {
+			progress = "?"
+		}
+		prefix := source.Source.Name + " "
+		if source.Health != "online" {
+			prefix += "[" + freshness + "] "
+		}
+		out = append(out, reportRow{text: Clean(prefix+"["+unknown(r.State)+"] "+unknown(app)+" "+progress+" · "+location+" / "+block+" ("+id+")", 800), keys: append(keys, sourceKey(source.Source.Name))})
+	} else {
+		out = append(out, reportRow{text: Clean("["+unknown(r.State)+"] "+unknown(app)+" · "+location+" / "+block+" ("+id+")", 800), keys: keys}, reportRow{text: Clean(strings.Join(details, " · "), 1000), keys: keys})
+	}
+	return out
+}

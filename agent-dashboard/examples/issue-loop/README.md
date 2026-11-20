@@ -8,8 +8,8 @@ this example only presents it. No workflow skill is invoked by this example.
 ## Native DAG Panel
 
 `loop.dag.layout.json` embeds `loop.dag.json` in a native `kind: dag` Panel,
-with an event Panel below it. A `style: return` annotation closes the declared
-loop without contributing to acyclic ranking or scheduling anything.
+with an event Panel below it. The graph shows one forward iteration only;
+starting the next issue belongs to the caller, not a reverse edge or scheduler.
 
 - `intake` binds `actor: lead`, the observed root session.
 - `triage` / `grill` / `pr` bind reported task IDs `1` / `2` / `3`.

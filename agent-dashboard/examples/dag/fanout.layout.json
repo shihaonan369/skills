@@ -74,12 +74,6 @@
                   "from": "lead",
                   "to": "merge",
                   "label": "cross-rank declaration"
-                },
-                {
-                  "from": "merge",
-                  "to": "lead",
-                  "style": "return",
-                  "label": "caller-declared loop"
                 }
               ]
             }

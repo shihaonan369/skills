@@ -169,7 +169,7 @@ func TestAIHeroGraphCompanionsMatchLiveWorkspace(t *testing.T) {
 	}
 }
 
-func TestAIHeroReviewDeclaresWorkerReportsToParent(t *testing.T) {
+func TestAIHeroReviewKeepsForwardDelegationAndFindings(t *testing.T) {
 	for _, name := range []string{"review", "review-no-spec"} {
 		t.Run(name, func(t *testing.T) {
 			for _, suffix := range []string{"", ".demo"} {
@@ -194,12 +194,11 @@ func TestAIHeroReviewDeclaresWorkerReportsToParent(t *testing.T) {
 						if !ok || !strings.Contains(outgoing.Label, "delegate") {
 							t.Fatal("missing parent delegation", name, suffix, worker)
 						}
-						incoming, ok := edges[[2]string{worker, "lead"}]
-						if !ok || incoming.Style != "return" || !strings.Contains(incoming.Label, "report") {
-							t.Fatal("missing explicit child report to parent", name, suffix, worker)
+						if _, ok := edges[[2]string{worker, "lead"}]; ok {
+							t.Fatal("reverse reporting edge remains", name, suffix, worker)
 						}
 						if _, ok := edges[[2]string{worker, "verdict"}]; !ok {
-							t.Fatal("report edge replaced independent findings aggregation")
+							t.Fatal("forward findings aggregation missing")
 						}
 					}
 				}

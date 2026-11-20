@@ -14,7 +14,7 @@ import (
 )
 
 // DAG is presentation only. Bindings never create agents/tasks and edges never
-// execute work. Return edges are excluded from the acyclic ranking constraint.
+// execute work. Every edge participates in the acyclic ranking constraint.
 type DAG struct {
 	Version int       `json:"version"`
 	Name    string    `json:"name,omitempty"`
@@ -28,10 +28,9 @@ type DAGNode struct {
 	Bind  *DAGBinding `json:"bind,omitempty"`
 	Meta  []string    `json:"meta,omitempty"`
 }
-type DAGBinding struct {
-	Actor string `json:"actor,omitempty"`
-	Task  string `json:"task,omitempty"`
-}
+
+// DAGBinding retains the original name for source compatibility.
+type DAGBinding = Binding
 type DAGEdge struct {
 	From  string `json:"from"`
 	To    string `json:"to"`
@@ -71,14 +70,8 @@ func validateDAG(g *DAG) error {
 			n.Meta[j] = Clean(m, 400)
 		}
 		if n.Bind != nil {
-			b := n.Bind
-			if (b.Actor == "") == (b.Task == "") {
-				return errors.New("dag bind requires exactly one actor or task")
-			}
-			for _, id := range []string{b.Actor, b.Task} {
-				if len(id) > 120 || Clean(id, 120) != id {
-					return errors.New("dag binding ID must be printable and at most 120 bytes")
-				}
+			if err := n.Bind.validate(); err != nil {
+				return err
 			}
 		}
 	}
@@ -88,7 +81,10 @@ func validateDAG(g *DAG) error {
 		if !ids[e.From] || !ids[e.To] {
 			return errors.New("dag edge references unknown node")
 		}
-		if e.Style != "" && e.Style != "solid" && e.Style != "dashed" && e.Style != "return" {
+		if e.Style == "return" {
+			return errors.New("dag return edges are no longer supported; remove them from the caller layout")
+		}
+		if e.Style != "" && e.Style != "solid" && e.Style != "dashed" {
 			return errors.New("unknown dag edge style")
 		}
 		key := e.From + "\x00" + e.To
@@ -112,10 +108,8 @@ func dagRanks(g *DAG) (map[string]int, error) {
 		degree[n.ID] = 0
 	}
 	for _, e := range g.Edges {
-		if e.Style != "return" {
-			degree[e.To]++
-			next[e.From] = append(next[e.From], e.To)
-		}
+		degree[e.To]++
+		next[e.From] = append(next[e.From], e.To)
 	}
 	queue := []string{}
 	for _, n := range g.Nodes {
@@ -137,7 +131,7 @@ func dagRanks(g *DAG) (map[string]int, error) {
 		}
 	}
 	if visited != len(g.Nodes) {
-		return nil, errors.New("dag cycle among ordinary edges; mark the closing edge style return")
+		return nil, errors.New("dag must be acyclic; remove reverse or cyclic edges")
 	}
 	return ranks, nil
 }
@@ -148,37 +142,28 @@ func dagNodeState(n DAGNode, s *State, now time.Time) (string, string, bool) {
 	if n.Bind == nil {
 		return "declared only", palette["gray"], false
 	}
-	state := ""
-	prefix := ""
-	if n.Bind.Actor != "" {
-		a := s.Agents[n.Bind.Actor]
-		if a == nil {
-			return "unobserved · unknown", palette["gray"], false
-		}
-		state = a.Status
-		if state == "running" {
-			prefix = fmt.Sprintf(" · tools %d", a.Tools)
-		}
-	} else {
-		t, ok := s.Tasks[n.Bind.Task]
-		if !ok {
-			return "unobserved · unknown", palette["gray"], false
-		}
-		state = t.Status
+	e, ok := observations(s, now).resolve(*n.Bind)
+	if !ok {
+		return "unobserved · unknown", palette["gray"], false
 	}
-	switch state {
-	case "running", "in_progress":
+	state, prefix := e.Status, e.Prefix
+	if e.LastKnown {
+		return "LAST KNOWN · " + unknown(state), palette["gray"], false
+	}
+	if e.Running {
 		spinner := []string{"◐", "◓", "◑", "◒"}[((now.UnixMilli()/500)%4+4)%4]
 		return spinner + " " + state + prefix, palette["amber"], true
-	case "completed", "done":
-		return "✓ " + state, palette["green"], false
-	case "failed", "blocked", "api_error", "API error":
-		return "! " + state, palette["red"], false
-	case "":
-		return "unknown", palette["gray"], false
-	default:
-		return Clean(state, 80), palette["gray"], false
 	}
+	if e.Success {
+		return "✓ " + state, palette["green"], false
+	}
+	if e.Alert {
+		return "! " + state, palette["red"], false
+	}
+	if state == "" {
+		return "unknown", palette["gray"], false
+	}
+	return Clean(state, 80), palette["gray"], false
 }
 
 type dagBox struct{ x, y, w, h int }
@@ -265,28 +250,11 @@ func drawFlowPacket(c *dagCanvas, r dagRoute, index int, clock time.Time, color 
 	}
 }
 
-// Opposite endpoint pairs are independent declarations, not inferred replies.
-func hasOpposingEdges(g *DAG) bool {
-	seen := map[[2]string]bool{}
-	for _, e := range g.Edges {
-		if e.From != e.To && seen[[2]string{e.To, e.From}] {
-			return true
-		}
-		seen[[2]string{e.From, e.To}] = true
-	}
-	return false
-}
-func flowCaption(g *DAG, motion bool) string {
-	if hasOpposingEdges(g) {
-		if !motion {
-			return "Flow off · ⇄ paired arrows"
-		}
-		return "Flow ⇄ paired arrows · decorative"
-	}
+func flowCaption(motion bool) string {
 	if !motion {
 		return "Flow off · a toggles motion"
 	}
-	return "Flow animation · decorative"
+	return "Forward flow · decorative"
 }
 
 type dagGeometry struct {
@@ -295,7 +263,7 @@ type dagGeometry struct {
 	width, height, legend int
 }
 
-// Use stable declared order within longest-path ranks. Every long/return edge
+// Use stable declared order within longest-path ranks. Every cross-rank edge
 // has an external rail, so it cannot cut through an intermediate rank's boxes.
 func placeDAG(g *DAG) (dagGeometry, error) {
 	ranks, err := dagRanks(g)
@@ -318,7 +286,7 @@ func placeDAG(g *DAG) (dagGeometry, error) {
 	}
 	for i, e := range g.Edges {
 		outgoing[e.From] = append(outgoing[e.From], i)
-		if e.Style == "return" || ranks[e.To] != ranks[e.From]+1 {
+		if ranks[e.To] != ranks[e.From]+1 {
 			external[i] = width + 2 + 2*len(external)
 			incoming[e.To] = append(incoming[e.To], i)
 		}
@@ -363,7 +331,7 @@ func placeDAG(g *DAG) (dagGeometry, error) {
 	}
 	geo.legend = y
 	geo.height = y + len(g.Edges)
-	geo.width = max(geo.width, ansi.StringWidth(flowCaption(g, true)))
+	geo.width = max(geo.width, ansi.StringWidth(flowCaption(true)))
 	for _, e := range g.Edges {
 		geo.width = max(geo.width, ansi.StringWidth(dagEdgeText(e)))
 	}
@@ -575,10 +543,10 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 	// Honest labels scroll with the canvas; the outer session badge remains.
 	caption := "Declared edges · observed states"
 	if f.Node != "" {
-		caption = "Declared [*]selected [<]up [>]down [=]both"
+		caption = "Declared [*]selected [<]up [>]down"
 	}
 	c.text(0, 0, caption, palette["gray"])
-	c.text(0, 1, flowCaption(g, o.Motion), palette["gray"])
+	c.text(0, 1, flowCaption(o.Motion), palette["gray"])
 	colors := map[string]string{}
 	for _, n := range g.Nodes {
 		colors[n.ID] = palette[n.Color]
@@ -609,7 +577,7 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 		route := geo.routes[index]
 		points := route.points()
 		edgeColor := edgeColorFor(index)
-		dashed := route.edge.Style == "dashed" || route.edge.Style == "return"
+		dashed := route.edge.Style == "dashed"
 		for i := 1; i < len(points); i++ {
 			a, b := points[i-1], points[i]
 			c.line(a.x, a.y, b.x, b.y, edgeColor, dashed)
@@ -634,19 +602,6 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 			arrowColor = edgeColorFor(index)
 		}
 		c.text(b.x+b.w/2, b.y-1, "▼", arrowColor)
-		// Keep the rail direction visible even as particles travel past it.
-		// A report to a higher-ranked parent travels upward, not as a second
-		// copy of the parent's downward delegation animation.
-		if route.rail >= 0 && route.in != route.out {
-			arrow := "▼"
-			if route.in < route.out {
-				arrow = "▲"
-			}
-			if f.Node == "" {
-				arrowColor = colors[route.edge.From]
-			}
-			c.text(route.rail, (route.in+route.out)/2, arrow, arrowColor)
-		}
 	}
 	for _, n := range g.Nodes {
 		b := geo.boxes[n.ID]
@@ -703,11 +658,7 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 		title += " [i: needs 82 cols]"
 	}
 	if f.Node != "" {
-		returns := "+return"
-		if f.ExcludeReturns {
-			returns = "-return"
-		}
-		title += " [" + Clean(f.Node, 80) + ":" + f.scopeName() + " " + returns + "]"
+		title += " [" + Clean(f.Node, 80) + ":" + f.scopeName() + "]"
 	}
 	title += fmt.Sprintf(" [x %d/%d · y %d/%d]", x, max(0, naturalWidth-graphWidth), y, max(0, geo.height-height))
 	canvas := c.lines()

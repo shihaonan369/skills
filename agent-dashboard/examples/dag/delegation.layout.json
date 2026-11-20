@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "name": "DEMO · declared parent/child round trip",
+  "name": "DEMO · forward parent/child delegation",
   "root": {
     "kind": "column",
     "children": [
       {
         "id": "graph",
         "kind": "dag",
-        "title": "Delegate ↓ / report ↑ · declared channels",
+        "title": "Parent to child · declared delegation",
         "dag": {
           "version": 1,
           "nodes": [
@@ -33,12 +33,6 @@
               "from": "parent",
               "to": "child",
               "label": "delegate work"
-            },
-            {
-              "from": "child",
-              "to": "parent",
-              "label": "report results",
-              "style": "return"
             }
           ]
         }

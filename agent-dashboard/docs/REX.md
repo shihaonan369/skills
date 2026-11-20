@@ -8,16 +8,19 @@ continue to work without it. Nothing under `legacy/rex/` is loaded.
 
 Run `<D> capabilities` before using these commands. Require `rex-local-open-v1`
 for `open` and `rex-observer-v1` for `rex-sources` / `rex-watch` / the
-`programs` and `sources` panels. An unknown command means an older binary, not
+`programs` and `sources` panels. Require `observation-bindings-v1` to use program
+bindings in `session`, `agent`/`agents`, `tasks`, `events` and DAG nodes; read
+[OBSERVATIONS.md](OBSERVATIONS.md) for the one shared binding contract. An unknown command means an older binary, not
 permission to guess an executable path or silently change observation modes.
 
-These adapters are in **source/development builds, version 0.2.0-dev**. The
-published, immutable **0.1.0** downloads and bootstrap pins do **not** include
-these capabilities. Bootstrap deliberately reuses existing binaries and does
-not upgrade them. A matching locally built binary works; public first-use Rex
-support requires a separately authorized release and reviewed pin update.
-Do not replace published assets, install a build toolchain for an end user, or
-claim that a stable download contains unshipped code.
+These adapters are included in **version 0.2.0**. Published **0.1.0** assets
+remain unchanged and do **not** include these capabilities. Bootstrap deliberately
+reuses existing binaries and does not upgrade them. If an older installation
+lacks a required capability, report the actual version and obtain approval before
+replacing its skill/binary; preserve unrelated skills, hooks and settings.
+Prebundled ZIPs use their matching included executable only. Source acquisition
+pins are reviewed separately after publication (README → Release pin lifecycle).
+No end-user build toolchain or replacement of published assets is needed.
 
 An installed, reachable Rex CLI/server is needed only for these adapters. The
 Lua observer is embedded in the Go executable and runs **locally inside the
@@ -95,8 +98,10 @@ edit, or remote deployment**. Full Pi tools/tasks/lifecycle remain unsupported.
    invoke the binary as `& $D` and quote `@file` arguments.
    Reuse the existing private source/layout paths for the same attachment;
    recreating equivalent files at new paths describes a different launch.
-4. Read [PANELS.md](PANELS.md) and compose the caller's layout with `programs`
-   and/or `sources` panels. [The small example](../examples/rex/README.md) is
+4. Read [PANELS.md](PANELS.md) and compose the caller's layout. `programs` /
+   `sources` remain direct inspectors. For cards, work rows, local change history
+   or program-bound DAGs, read [OBSERVATIONS.md](OBSERVATIONS.md) and select exact
+   typed bindings; native actor/task collections are never inferred. [The small example](../examples/rex/README.md) is
    presentation only, not a default pipeline. Supply real source-qualified
    record keys from `rex-watch --status` for exact `program_ids` bindings.
 5. Open or reuse the local viewer, then verify its returned ID, rendered output,
@@ -166,7 +171,10 @@ completion, and an ID hierarchy is not agent delegation. Full program keys hash
 `[host_id, session_id, block_id, record_id]`, including the empty root record ID.
 Use full keys from JSON, not shortened displayed block IDs, for bindings.
 
-Observation snapshots stay in memory; source errors retain last-known data.
+Observation snapshots and a bounded 500-entry local change history stay in
+memory; source errors retain last-known data. Initial/reconnect baselines mark
+unknown history/gaps, not a replayed lifecycle. `changes` and `dropped_changes`
+are exposed by `--status`; see [history semantics](OBSERVATIONS.md#local-observation-history).
 Caller-created configuration and local launch receipts remain private files.
 Limits: 16 sources; per source 64 selected/discovered sessions, 256 local
 terminal panes, 4096 reports; 8 MiB per wire message; 256 KiB source/layout files.

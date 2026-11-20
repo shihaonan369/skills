@@ -22,7 +22,7 @@ func TestPlatformPackageIncludesBootstrapWithoutDeveloperRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, required := range []string{"SKILL.md", "README.md", "bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256", "docs/REX.md", "examples/rex/overview.layout.json", "LICENSES.txt", binary} {
+	for _, required := range []string{"SKILL.md", "README.md", "bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256", "docs/REX.md", "docs/OBSERVATIONS.md", "examples/rex/overview.layout.json", "examples/rex/records.template.layout.json", "LICENSES.txt", binary} {
 		if !slices.Contains(files, required) {
 			t.Fatalf("missing bootstrap package file %s", required)
 		}
@@ -41,7 +41,7 @@ func TestPlatformPackageIncludesBootstrapWithoutDeveloperRuntime(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer z.Close()
-	for _, name := range []string{"bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256"} {
+	for _, name := range []string{"bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256", ".prebundled"} {
 		f, err := z.Open("agent-dashboard/" + name)
 		if err != nil {
 			t.Fatal(err)

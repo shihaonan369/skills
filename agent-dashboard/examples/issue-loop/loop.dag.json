@@ -34,7 +34,6 @@
   "edges": [
     { "from": "intake", "to": "triage", "label": "next" },
     { "from": "triage", "to": "grill", "label": "plan" },
-    { "from": "grill", "to": "pr", "label": "pass" },
-    { "from": "pr", "to": "intake", "label": "↻ next issue", "style": "return" }
+    { "from": "grill", "to": "pr", "label": "pass" }
   ]
 }

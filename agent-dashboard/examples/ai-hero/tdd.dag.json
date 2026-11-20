@@ -43,12 +43,6 @@
       "from": "red",
       "to": "green",
       "label": "caller-declared transition"
-    },
-    {
-      "from": "green",
-      "to": "red",
-      "label": "next agreed slice",
-      "style": "return"
     }
   ]
 }
