@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"reflect"
 	"strings"
 	"time"
 
@@ -125,14 +126,15 @@ func (v *Viewer) anchorEventHistory(next *State) {
 		added := appendedEvents(before, after)
 		v.Offset = min(v.Offset+len(added), max(0, len(after)-1))
 	}
-	if v.State.Layout == nil || next.Layout == nil {
+	beforeLayout, afterLayout := v.canvasLayout(), presentationLayout(next, time.Time{})
+	if beforeLayout == nil || afterLayout == nil {
 		return
 	}
 	oldPanels := map[string]Panel{}
-	for _, p := range leaves(v.State.Layout.Root) {
+	for _, p := range leaves(beforeLayout.Root) {
 		oldPanels[p.ID] = p
 	}
-	for _, p := range leaves(next.Layout.Root) {
+	for _, p := range leaves(afterLayout.Root) {
 		old := oldPanels[p.ID]
 		if p.Kind != "events" || old.Kind != "events" || !sameEventFilter(old, p) || v.Offsets[p.ID] <= 0 {
 			continue
@@ -143,6 +145,9 @@ func (v *Viewer) anchorEventHistory(next *State) {
 	}
 }
 func sameEventFilter(a, b Panel) bool {
+	if !reflect.DeepEqual(a.Select, b.Select) || !reflect.DeepEqual(a.Bind, b.Bind) {
+		return false
+	}
 	if strings.Join(a.Actors, "\x00") != strings.Join(b.Actors, "\x00") || strings.Join(a.Sources, "\x00") != strings.Join(b.Sources, "\x00") || strings.Join(a.ProgramIDs, "\x00") != strings.Join(b.ProgramIDs, "\x00") || len(a.Bindings) != len(b.Bindings) {
 		return false
 	}

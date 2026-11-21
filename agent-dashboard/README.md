@@ -16,6 +16,15 @@ capabilities. Bootstrap reuses existing executables without upgrading them;
 check `capabilities` before using [Optional Rex integration](#optional-rex-integration).
 Remove retired `style: return` edges explicitly from caller layouts when migrating.
 
+**Version 0.3.0** adds shared live membership across every panel shape and
+agent-owned semantic scopes, gated by `dynamic-layout-v1` / `agent-scope-v1`.
+Prefer the same native background subagent for initial and ongoing classification;
+Claude Code workers can own Monitor with the quiet `scope-watch` event source.
+Older 0.2.0 assets lack these features. Existing binaries are not upgraded. Read
+[Dynamic membership and classification](docs/DYNAMIC.md) for setup and the
+unverified native-harness acceptance boundary. Source bootstrap pins follow the
+[two-phase release lifecycle](#release-pin-lifecycle).
+
 ## First use
 
 Install/discover the skill in Claude Code and invoke `/agent-dashboard` with your
@@ -73,21 +82,21 @@ Packages are available for **macOS, Windows, and Linux**, each in **x64 and ARM6
 Each ZIP contains this skill directory, one matching executable, docs, examples,
 and third-party notices. No end-user compilation or extra runtime is required.
 
-Choose the uploaded `agent-dashboard-0.2.0-<os>-<arch>.zip` asset, **not** the
+Choose the uploaded `agent-dashboard-0.3.0-<os>-<arch>.zip` asset, **not** the
 automatic “Source code” archives. Source checkouts omit `bin/` and `target/`.
 Extract to a permanent directory before installing hooks; keep existing unrelated
 skills intact. Platform verification and unsigned-build caveats are covered under
 [Safety, distribution and limitations](#safety-distribution-and-limitations).
 
-### Version 0.2.0
+### Version 0.3.0
 
 | Operating system | x64 / AMD64 | ARM64 |
 | --- | --- | --- |
-| macOS | [Intel Mac ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/agent-dashboard-0.2.0-darwin-amd64.zip) | [Apple Silicon ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/agent-dashboard-0.2.0-darwin-arm64.zip) |
-| Windows | [Windows x64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/agent-dashboard-0.2.0-windows-amd64.zip) | [Windows ARM64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/agent-dashboard-0.2.0-windows-arm64.zip) |
-| Linux | [Linux x64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/agent-dashboard-0.2.0-linux-amd64.zip) | [Linux ARM64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/agent-dashboard-0.2.0-linux-arm64.zip) |
+| macOS | [Intel Mac ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/agent-dashboard-0.3.0-darwin-amd64.zip) | [Apple Silicon ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/agent-dashboard-0.3.0-darwin-arm64.zip) |
+| Windows | [Windows x64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/agent-dashboard-0.3.0-windows-amd64.zip) | [Windows ARM64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/agent-dashboard-0.3.0-windows-arm64.zip) |
+| Linux | [Linux x64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/agent-dashboard-0.3.0-linux-amd64.zip) | [Linux ARM64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/agent-dashboard-0.3.0-linux-arm64.zip) |
 
-[SHA-256 checksums](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.2.0/SHA256SUMS)
+[SHA-256 checksums](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/SHA256SUMS)
 cover the six downloadable ZIPs. Before extracting, compare the downloaded
 archive's digest with `SHA256SUMS`:
 
@@ -242,6 +251,24 @@ launch recovery. The **[small caller example](examples/rex/README.md)** supplies
 presentation only; the caller can arrange every panel shape with explicit
 typed bindings, including program-bound DAGs and observation history. `2`/`3` show program/source diagnostics in this mode.
 
+## Dynamic panels and monitoring scope (0.3.0+)
+
+The caller can declare collections once and have new observed members populate
+DAGs, repeated cards, lists, annotations and split subtrees automatically. One
+shared projection supplies every shape, with stable IDs and explicit bounds;
+static layouts remain static. See [dynamic examples](examples/dynamic/README.md).
+
+For semantic requests such as “show implement agents”, the **initiating agent**
+plans scope and delegates **initial and subsequent judgements to the same native
+background subagent** where available. In Claude Code, prefer worker-owned Monitor
+with the deduplicated `scope-watch` stream; the worker handles first candidates,
+later arrivals and bounded watch renewal without routing raw events through the
+main conversation. The dashboard only queues requests and applies decisions; it
+never starts Claude/Pi or calls an LLM. Fall back to background long polling,
+then foreground subagent batches, and only then main-agent checkpoints. Disclose
+scheduling gaps; unknown identities stay excluded. Read
+[the complete scope/worker contract](docs/DYNAMIC.md).
+
 ## Synthetic demonstration
 
 ```sh
@@ -311,7 +338,7 @@ go run ./cmd/package
 ```
 
 Packaging cross-builds six pure-Go binaries (`CGO_ENABLED=0`), identifies them
-using `internal/buildinfo.Version` (currently `0.2.0`), writes per-platform zips and `target/SHA256SUMS`, and collects dependency license notices. Build output
+using `internal/buildinfo.Version` (currently `0.3.0`), writes per-platform zips and `target/SHA256SUMS`, and collects dependency license notices. Build output
 (`bin/`, `target/`, toolchain) stays out of Git. Publish the six ZIPs and
 `target/release/SHA256SUMS` as GitHub Release assets; do not substitute automatic
 source archives. `target/SHA256SUMS` is the separate local-build manifest covering

@@ -1,11 +1,100 @@
-# Validation matrix · 0.2.0
+# Validation matrix · version 0.3.0
 
-Latest checks recorded **2026-11-20 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
+Latest checks recorded **2026-11-21 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
 Historical sections below retain their original scope.
 Local build toolchain: **Go 1.27.4**, archive SHA-256 checked before extraction
 into ignored `.build-tools/go/`; no system-wide toolchain/runtime installed.
 Claude Code used for historical integration checks: **2.1.312**.
 Distribution builds are unsigned; release assets are not signed/notarized packages.
+
+## Version 0.3.0 release preparation (2026-11-21)
+
+The user authorized commit, push and release after the two-axis review. This
+release includes shared dynamic membership, agent-owned semantic scopes, and a
+worker-owned Monitor procedure for both initial and subsequent classification.
+Review found no confirmed spec defects or documented-standard violations; two
+non-blocking maintainability heuristics remain (duplicate selection notices and
+repeated string-enum validation). No unrelated refactor was bundled into release
+preparation. Earlier source-only sections below retain their historical scope.
+
+| Scope | Result / exact boundary |
+| --- | --- |
+| Go regression | `go test -count=1 -race -cover -json ./...`: **113 top-level tests + 74 subtests passed**, **2 conditional test skips**. `go vet ./...` passed. Coverage: dashboard **90.0%**, CLI **71.8%**, Rex observer **88.7%**, packager **25.3%** |
+| Bootstrap | **20 POSIX + 14 PowerShell tests passed**. PowerShell exercised the existing developer runtime on macOS; native Windows/PowerShell 5.1 remain unverified |
+| Official Rex Lua contract | Opt-in observer test passed in the existing official Lua runtime with synthetic API data; no telemetry was submitted and no Rex configuration changed |
+| Source macOS PTY | **Six synthetic runs** passed on the 0.3.0 binary: dynamic mailbox scope-watch stream, dynamic scope-poll fallback, all-panel Rex observation, forward delegation q and Ctrl-C exits, fanout effects/controls/resize. Included paused discovery, pending/include/exclude transitions, terminal restoration and child cleanup |
+| Distribution | Six **0.3.0** platform ZIPs built in an isolated ignored workspace. All **12** local and **6** archive-only manifest hashes verified. Archives include one platform executable, `.prebundled`, current docs and all **19** JSON examples; no Go/Lua/Python/test/legacy runtime files |
+| Extracted macOS package | Passed offline bootstrap with HTTPS/hash/ZIP utilities absent from PATH, exact version and five capabilities, all 19 layouts, isolated synthetic rendering and a further scope-watch PTY run |
+| Release integrity | Public publication and source-main repinning are separate subsequent steps. Release ZIP helpers retain the preceding verified 0.2.0 acquisition pins; `.prebundled` prevents any old-version fallback. Existing 0.1.0/0.2.0 assets must remain unchanged |
+
+**Real native background-subagent + Monitor + LLM classification and actual
+watch-renewal delivery remain unverified.** Monitor mechanics were checked in
+current official documentation; classification/UI tests use synthetic replies.
+Only macOS arm64 was runtime-tested. All other targets are **cross-build-only**;
+packages are unsigned and not notarized. No installed skill/binary, application
+settings/hooks, private layout or observed remote host was changed.
+
+## Background-first initial and ongoing classification (2026-11-21)
+
+The caller protocol now delegates **both initial and later semantic decisions to
+one native background subagent**, preferably using its own Claude Code Monitor.
+The main conversation supplies scope/context and starts/stops the worker, without
+an initial classification pass. A new `scope-watch` command streams pending and
+changed requests; it is a local event source, not a classifier or dispatcher.
+Monitor availability, ownership, bounded deadlines/renewal, cancellation and
+background-poll/foreground/main-agent fallbacks are documented in DYNAMIC.md.
+
+| Scope | Result / exact boundary |
+| --- | --- |
+| Go regression | `go test -count=1 -race -cover -json ./...`: **113 top-level tests + 74 subtests passed**, **2 conditional test skips** (plus the buildinfo package with no tests). `go vet ./...` passed. Coverage: dashboard **90.0%**, CLI **71.8%**, Rex observer **88.7%**, packager **25.3%** |
+| Watch transport | Public mailbox/watch interfaces verified initial and later subagent-origin synthetic replies updating graph/cards/lists, fingerprint dedup across atomic writes, unknown-to-changed identity requeue, restart replay, all **71** initial candidates as **64 + 7** requests, empty startup without idle repeats, deadline without mailbox closure, context cancellation, output/read failures and duration bounds. CLI verified JSON-line encoding and immediate closed-stream exit |
+| Red/green evidence | The first watch test failed with the missing public WatchScope API; the CLI test failed on the missing duration flag. Both passed after implementation. Ignored logs: `target/scope-monitor-red.log`, `target/scope-monitor-cli-red.log`, `target/scope-monitor-go-tests.json` |
+| Native macOS PTY | **Two synthetic runs** passed on the newly built binary: one long-lived scope-watch subprocess delivered initial, later and paused-view candidates, synthetic replies updated the canvas, and closure emitted a final event and reaped the stream; the existing bounded scope-poll path also passed. Both checked exclusions, resize/controls, terminal restoration and synthetic Rex-child cleanup |
+| Platform builds | Six current-source binaries built under ignored `target/scope-monitor-builds/`. macOS arm64 runtime exercised; Darwin amd64, Linux arm64/amd64 and Windows arm64/amd64 remain **cross-build-only** |
+| Documentation verification | Official Claude Code Monitor/subagent references checked through Context7 and public docs. Installed CLI reports **2.1.312**; this does **not** establish native tool exposure, background-event delivery or real LLM classification in the initiating harness |
+
+**No real native background subagent, Monitor invocation, watch renewal event or
+LLM judgement was run in this update.** PTY worker replies are explicit fixtures;
+`origin:subagent` records supplied provenance, not authenticated proof of a real
+subagent. End-to-end harness acceptance remains unverified. No application
+settings/hooks, installed binaries, bootstrap pins, private layouts or remote
+hosts were changed; nothing was committed, pushed, published or deployed.
+Earlier 0.3.0-dev ZIPs recorded below predate scope-watch and the revised worker
+protocol; they were not rebuilt or revalidated as current distribution assets.
+
+## Dynamic membership and agent-owned scopes (2026-11-20)
+
+Source 0.3.0-dev adds `dynamic-layout-v1` and `agent-scope-v1`. One shared
+selection/materialization layer expands all panel shapes and row/column subtrees.
+An optional private mailbox queues new candidates and accepts fingerprinted
+include/exclude/unknown decisions from the initiating agent or its native
+subagent. No dashboard-owned model client, Claude/Pi subprocess, agent dispatcher,
+workflow inference or remote service was added.
+
+| Scope | Result / exact boundary |
+| --- | --- |
+| Go regression | `go test -count=1 -race -cover -json ./...`: **109 top-level tests + 74 subtests passed**, with **2 conditional skips**. `go vet ./...` passed |
+| Coverage | Dashboard **89.9%**, CLI **71.3%**, Rex observer **88.7%**, packager **25.3%** |
+| Shared membership | Native role/state selectors, source-qualified program/source selectors, all nine leaf shapes and both split kinds, item-binding scope/ambiguity validation, empty/removal behavior, stable focus and removed navigation-state cleanup passed through public layout/observation/viewer interfaces |
+| Semantic scopes | Real private file/OS-lock/atomic-write transport tested with synthetic classifier replies. Pending/unknown stay excluded; one decision updates DAG/cards/lists; metadata/new-dispatch invalidation, stale-batch rollback, concurrent replies, bounded long-poll/stop, symlink refusal, malformed input, provenance and no tool-input leakage passed. Classification precedes display limits: all **71** candidates were handled with a one-member display limit |
+| Native macOS PTY | **5 synthetic runs**: dynamic scoped Rex graph/cards/lists/program/source/annotation canvas; forward delegation q/Ctrl-C; fanout controls/effects/resize; existing all-panel Rex observer. New records queue automatically, remain excluded until a synthetic include, and excluded records never enter the canvas. Scoped discovery continues while paused, while displayed membership stays frozen. Terminal restoration, resume, child reaping and stop protocol passed |
+| Pause regression evidence | The new PTY check first failed when scoped discovery stopped with the paused viewer, then passed after keeping observation refresh/mailbox discovery active under the existing paused-snapshot epoch guard |
+| Bootstrap/observer regression | **20 POSIX + 14 PowerShell tests passed** with existing developer tools; PowerShell ran on macOS, not native Windows/PowerShell 5.1. The opt-in official Rex Lua contract passed separately with synthetic API data and no telemetry submission |
+| Distribution | Six **0.3.0-dev** binaries/ZIPs built in an isolated ignored workspace. All **12** local and **6** archive-manifest hashes verified. Each archive has one matching binary, the bootstrap marker, dynamic/scope docs and **19** JSON examples; developer scripts/tests/Go/Lua/legacy files are excluded. The native package passed offline bootstrap, exact capabilities, all example layouts and isolated synthetic rendering |
+
+**Native harness background-subagent scheduling and real LLM classification were
+not end-to-end verified.** The skill defines a subagent-first procedure and
+explicit foreground/main-agent fallback; the dashboard supplies the transport,
+not an autonomous wake-up mechanism. General-purpose type alone is insufficient
+identity evidence. Missing caller context stays unknown, and Rex reports remain
+program reports rather than native agent telemetry.
+
+No public release, commit, push, deployment, application settings/hook change,
+private layout rewrite or installed-binary replacement occurred for this update.
+The published 0.2.0 assets/bootstrap pins remain unchanged and lack these new
+features. Only macOS arm64 was runtime-tested; all other targets remain
+**cross-build-only**, unsigned and not runtime-verified. Historical sections below
+retain the scope/version of their original checks.
 
 ## Published 0.2.0 and source-main pins (2026-11-20)
 

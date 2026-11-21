@@ -59,7 +59,10 @@ Example layout (the example declares structure, not actual execution):
 
 ## Graph schema
 
-- Graph: required `version: 1`, `nodes`; optional `name`, `edges`.
+- Static graph: required `version: 1`, `nodes`; optional `name`, `edges`.
+  Version 0.3.0 adds opt-in `select`, `node` styling and `attach_from`; dynamic
+  graphs may start without nodes. See [DYNAMIC.md](DYNAMIC.md) for capability gates,
+  semantic scope classification and caller-declared grouping (not parent inference).
   The surrounding Panel's `title` controls its heading; `name` is graph metadata.
 - Node: required unique printable `id`; optional `label` (defaults to ID),
   `color`, `bind`, `meta` (caller-authored lines, not telemetry).

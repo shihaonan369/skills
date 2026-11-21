@@ -178,10 +178,11 @@ func drawLinkDetails(graph []string, g *DAG, s *State, f linkFocus, r linkRelati
 }
 
 func (v Viewer) focusedDAG() (Panel, bool) {
-	if v.Page != 0 || v.Help || v.State == nil || v.State.Layout == nil {
+	layout := v.canvasLayout()
+	if v.Page != 0 || v.Help || layout == nil {
 		return Panel{}, false
 	}
-	for _, p := range leaves(v.State.Layout.Root) {
+	for _, p := range leaves(layout.Root) {
 		if p.ID == v.focus() && p.Kind == "dag" && p.DAG != nil && len(p.DAG.Nodes) > 0 && len(p.DAG.Nodes) <= 64 {
 			return p, true
 		}
@@ -224,8 +225,8 @@ func (v *Viewer) linkKey(key string) {
 }
 func (v *Viewer) reconcileLinks(next *State) {
 	retained := map[string]linkFocus{}
-	if next.Layout != nil {
-		for _, p := range leaves(next.Layout.Root) {
+	if layout := presentationLayout(next, time.Time{}); layout != nil {
+		for _, p := range leaves(layout.Root) {
 			if p.Kind != "dag" || p.DAG == nil {
 				continue
 			}

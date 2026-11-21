@@ -21,6 +21,9 @@ type Layout struct {
 	Root    Panel  `json:"root"`
 }
 type Panel struct {
+	Select     *Selection `json:"select,omitempty"`
+	Repeat     *Repeat    `json:"repeat,omitempty"`
+	notice     string
 	Bind       *Binding  `json:"bind,omitempty"`
 	Bindings   []Binding `json:"bindings,omitempty"`
 	ID         string    `json:"id,omitempty"`
@@ -62,6 +65,9 @@ func ParseLayout(raw []byte) (*Layout, error) {
 		return nil, errors.New("layout name too long")
 	}
 	l.Name = Clean(l.Name, 160)
+	if err := validateDynamicSyntax(&l.Root, ""); err != nil {
+		return nil, err
+	}
 	count := 0
 	ids := map[string]bool{}
 	var check func(*Panel, int) error
@@ -114,12 +120,12 @@ func ParseLayout(raw []byte) (*Layout, error) {
 			if err := p.Bind.validate(); err != nil {
 				return err
 			}
-			if (p.Kind != "agent" && p.Kind != "session") || p.Actor != "" || len(p.Bindings) > 0 {
-				return errors.New("bind belongs to single agent/session panels and cannot mix legacy bindings")
+			if p.Kind == "row" || p.Kind == "column" || p.Kind == "text" || p.Kind == "dag" || p.Actor != "" || len(p.Bindings)+len(p.Actors)+len(p.TaskIDs)+len(p.ProgramIDs)+len(p.Sources) > 0 {
+				return errors.New("bind belongs to record panels and cannot mix selectors")
 			}
 		}
 		if len(p.Bindings) > 0 {
-			if len(p.Bindings) > 4096 || (p.Kind != "agents" && p.Kind != "tasks" && p.Kind != "events") || len(p.Actors) > 0 || len(p.TaskIDs) > 0 {
+			if len(p.Bindings) > 4096 || (p.Kind != "agents" && p.Kind != "tasks" && p.Kind != "events" && p.Kind != "programs" && p.Kind != "sources") || len(p.Actors) > 0 || len(p.TaskIDs) > 0 {
 				return errors.New("bindings belongs to list/event panels and cannot mix legacy filters")
 			}
 			seen := map[Binding]bool{}

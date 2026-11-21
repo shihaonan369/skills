@@ -115,3 +115,12 @@ per widget or inventing a second telemetry schema in every renderer.
 The public validation seams are `ParseLayout`, `ProgramState`, `Viewer` and the
 real Bubble Tea lifecycle, plus `Monitor.Snapshot` at the official CLI executor
 seam. See [VALIDATION.md](VALIDATION.md) for exact executed scope.
+
+## Dynamic selection extension (0.3.0+)
+
+[DYNAMIC.md](DYNAMIC.md) extends this seam with collection selectors, source
+bindings, item-template expansion and agent-owned scope decisions. An explicit
+`select.kind:programs` can follow new Rex reports without enumerating program
+keys, while still never substituting reports into native collections implicitly.
+These additions require `dynamic-layout-v1` / `agent-scope-v1`, not merely the
+0.2.0 binding capability. New source bindings remain a distinct namespace.

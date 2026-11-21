@@ -16,10 +16,14 @@ import (
 // DAG is presentation only. Bindings never create agents/tasks and edges never
 // execute work. Every edge participates in the acyclic ranking constraint.
 type DAG struct {
-	Version int       `json:"version"`
-	Name    string    `json:"name,omitempty"`
-	Nodes   []DAGNode `json:"nodes"`
-	Edges   []DAGEdge `json:"edges,omitempty"`
+	Select     *Selection       `json:"select,omitempty"`
+	Node       *DAGNodeTemplate `json:"node,omitempty"`
+	AttachFrom string           `json:"attach_from,omitempty"`
+	notice     string
+	Version    int       `json:"version"`
+	Name       string    `json:"name,omitempty"`
+	Nodes      []DAGNode `json:"nodes"`
+	Edges      []DAGEdge `json:"edges,omitempty"`
 }
 type DAGNode struct {
 	ID    string      `json:"id"`
@@ -42,7 +46,24 @@ func validateDAG(g *DAG) error {
 	if g == nil || g.Version != 1 {
 		return errors.New("dag requires version 1")
 	}
-	if len(g.Nodes) == 0 || len(g.Nodes) > 64 || len(g.Edges) > 256 {
+	if g.Select != nil {
+		if err := g.Select.validate(); err != nil {
+			return err
+		}
+	} else if g.Node != nil || g.AttachFrom != "" {
+		return errors.New("dynamic DAG node/attach_from requires select")
+	}
+	if g.Node != nil {
+		if _, ok := palette[g.Node.Color]; !ok && g.Node.Color != "" || len(g.Node.Label) > 160 || len(g.Node.Meta) > 4 {
+			return errors.New("invalid dynamic DAG node template")
+		}
+		for _, line := range g.Node.Meta {
+			if len(line) > 2000 {
+				return errors.New("dynamic DAG metadata too long")
+			}
+		}
+	}
+	if len(g.Nodes) == 0 && g.Select == nil || len(g.Nodes) > 64 || len(g.Edges) > 256 {
 		return errors.New("dag limited to 1..64 nodes and 256 edges")
 	}
 	if len(g.Name) > 160 {
@@ -74,6 +95,9 @@ func validateDAG(g *DAG) error {
 				return err
 			}
 		}
+	}
+	if g.AttachFrom != "" && !ids[g.AttachFrom] {
+		return errors.New("attach_from requires a caller-declared static node")
 	}
 	seen := map[string]bool{}
 	for i := range g.Edges {
@@ -521,6 +545,9 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 		return fit([]string{"Invalid DAG: " + Clean(err.Error(), 200)}, w, h)
 	}
 	g = &clone
+	if len(g.Nodes) == 0 {
+		return fit([]string{title, "No matching observations; graph membership is dynamic.", g.notice}, w, h)
+	}
 	geo, err := placeDAG(g)
 	if err != nil {
 		return fit([]string{Clean(err.Error(), 200)}, w, h)
@@ -542,6 +569,9 @@ func renderDAGPanel(p Panel, s *State, w, h int, o canvasOptions, title, color s
 	c := newDAGCanvas(graphWidth, height, x, y)
 	// Honest labels scroll with the canvas; the outer session badge remains.
 	caption := "Declared edges · observed states"
+	if g.notice != "" {
+		caption = g.notice
+	}
 	if f.Node != "" {
 		caption = "Declared [*]selected [<]up [>]down"
 	}

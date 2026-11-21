@@ -21,9 +21,18 @@ func rexObservations(s *State, now time.Time) *observationView {
 			if source.Health != "online" {
 				rows = append(rows, reportRow{text: "LAST KNOWN / " + Clean(source.Health, 40) + " · " + Clean(source.Error, 400), keys: []echoKey{sourceKey(source.Source.Name)}})
 			}
-			e := observationEntity{Source: source.Source.Name, Rows: rows, Status: program.Record.State, Keys: keys, LastKnown: source.Health != "online", Running: program.Record.State == "working", Alert: program.Record.State == "error" || program.Record.State == "blocked"}
+			e := observationEntity{Source: source.Source.Name, Label: Clean(program.Record.Title, 80) + " · " + Clean(program.Record.ID, 80), CompactRows: programReportRows(program, source, true, now), Rows: rows, Status: program.Record.State, Keys: keys, LastKnown: source.Health != "online", Running: program.Record.State == "working", Alert: program.Record.State == "error" || program.Record.State == "blocked"}
 			// `done` means a program reported a result, not verified task/Issue success.
 			// Keep it literal and do not add a green completion check.
+			e.Context = "Rex:" + source.Source.HostID + ":" + source.InstanceID
+			app := program.Record.EffectiveApp
+			if app == "" {
+				app = program.Record.App
+			}
+			e.IdentityMetadata = Clean(fmt.Sprintf("app=%s; kind=%s; title=%s; session=%s; block=%s; record=%s", app, program.Record.Kind, Clean(program.Record.Title, 240), program.SessionLabel, program.BlockLabel, program.Record.ID), 1000)
+			if program.Record.Title == "" {
+				e.Label = Clean(program.Record.App, 80) + " · " + Clean(program.BlockLabel, 80)
+			}
 			v.Entities[b] = e
 			v.Programs = append(v.Programs, b)
 			v.Values[programKey(program.Key)] = program.Record.ObservationValue()
@@ -48,6 +57,9 @@ func rexObservations(s *State, now time.Time) *observationView {
 			rows = append(rows, reportRow{text: "No sessions with program reports observed; lifecycle/progress unknown."})
 		}
 		v.Summaries = append(v.Summaries, observationEntity{Source: source.Source.Name, Rows: rows})
+		b := Binding{Source: source.Source.Name}
+		v.SourceBindings = append(v.SourceBindings, b)
+		v.Entities[b] = observationEntity{Source: source.Source.Name, Label: source.Source.Name, Context: "Rex:" + source.Source.HostID + ":" + source.InstanceID, Rows: rows, Status: source.Health, Keys: []echoKey{sourceKey(source.Source.Name)}}
 	}
 	// Only explicit typed bindings project reports into actor/task-shaped panels.
 	// Native collections stay empty; legacy filters never alias program keys.

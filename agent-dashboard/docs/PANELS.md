@@ -3,7 +3,8 @@
 **Caller owns composition; dashboard owns rendering and local observation.**
 A **Panel** is a rectangular TUI surface. A **buffer** is the bounded data shown
 inside it. A **layout** composes panels through rows/columns. There is no workflow
-engine, stage detector, agent router, role classifier, or automatic graph builder.
+engine, stage detector, agent router, role classifier, or automatic workflow inference. Version 0.3.0 adds explicit dynamic
+membership templates, not inferred relationships.
 Changing a layout never starts/stops agents or changes work items/permissions.
 
 ## Publish a layout
@@ -166,3 +167,12 @@ sources; closing it stops those subscriptions, not the observed programs. Its bo
 Its change echoes compare whole report/source-health observations, never report ages
 or contact clocks; the footer labels those units `observations`, not events or
 throughput. See [REX.md](REX.md) for its separate privacy/lifecycle boundary.
+
+## Dynamic membership (0.3.0+)
+
+Read [DYNAMIC.md](DYNAMIC.md) for the shared `select`, universal `repeat`, scoped
+agent-classification mailbox and native-subagent-first procedure. Collections can
+follow newly observed members, and any panel or split subtree can repeat an item
+binding without caller rewrites on every spawn. Static declarations are unchanged.
+Program/source panels keep their types; text stays caller-authored. Classification
+changes display membership, never telemetry, task state or relationship facts.

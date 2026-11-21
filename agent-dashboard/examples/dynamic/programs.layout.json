@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "name": "Caller-selected live Rex records, not agent telemetry",
+  "root": {
+    "kind":"column",
+    "children":[
+      {"id":"reports","kind":"dag","size":18,"dag":{"version":1,"select":{"kind":"programs","limit":8},"nodes":[]}},
+      {"id":"cards","kind":"session","size":12,"bind":{"item":true},"repeat":{"select":{"kind":"programs","limit":4},"direction":"row","stack_below":90}},
+      {"id":"rows","kind":"tasks","select":{"kind":"programs","limit":8}},
+      {"id":"sources","kind":"sources","size":8,"select":{"kind":"sources"}}
+    ]
+  }
+}

@@ -161,7 +161,7 @@ func TestTypedBindingValidationRejectsAmbiguityBeforeReplacingLayout(t *testing.
 		`{"id":"x","kind":"agent","bind":{"program":"rex:` + strings.Repeat("A", 64) + `"}}`,
 		`{"id":"x","kind":"tasks","bindings":[{"program":"` + key + `"},{"program":"` + key + `"}]}`,
 		`{"id":"x","kind":"tasks","task_ids":["1"],"bindings":[{"program":"` + key + `"}]}`,
-		`{"id":"x","kind":"events","bind":{"program":"` + key + `"}}`,
+		`{"id":"x","kind":"events","bind":{"program":"` + key + `"},"select":{"kind":"programs"}}`,
 		`{"id":"x","kind":"text","bindings":[{"program":"` + key + `"}]}`,
 		`{"kind":"column","bind":{"program":"` + key + `"},"children":[{"id":"x","kind":"session"}]}`,
 		`{"id":"x","kind":"dag","dag":{"version":1,"nodes":[{"id":"p","bind":{"task":"1","program":"` + key + `"}}]}}`,

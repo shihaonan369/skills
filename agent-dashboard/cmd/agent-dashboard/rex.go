@@ -192,7 +192,11 @@ func runRex(command string, args []string, out io.Writer) error {
 		if opts.Status {
 			err = encode(snapshot)
 		} else {
-			_, err = fmt.Fprintln(out, (d.Viewer{State: d.ProgramState(snapshot, composition), Width: opts.Width, Height: opts.Height}).View())
+			state, prepareErr := d.PreparePresentation(d.ProgramState(snapshot, composition))
+			if prepareErr != nil {
+				return prepareErr
+			}
+			_, err = fmt.Fprintln(out, (d.Viewer{State: state, Width: opts.Width, Height: opts.Height}).View())
 		}
 		if err != nil {
 			return err

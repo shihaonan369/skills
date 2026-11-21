@@ -59,6 +59,7 @@ type Event struct {
 	Text  string `json:"text"`
 }
 type State struct {
+	scopeResults   map[string]Scope
 	observation    *observationView
 	ProgramReports *rx.Snapshot      `json:"program_reports,omitempty"`
 	Layout         *Layout           `json:"layout,omitempty"`

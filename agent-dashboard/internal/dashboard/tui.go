@@ -54,22 +54,26 @@ func (v Viewer) load() tea.Msg {
 	} else {
 		s, e = Snapshot(v.Root, v.Session)
 	}
+	if e == nil && s != nil {
+		s, e = PreparePresentation(s)
+	}
 	return snapshotMsg{state: s, err: e, at: time.Now(), epoch: v.readEpoch}
 }
 func tick() tea.Cmd {
 	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg { return tickMsg(t) })
 }
 func (v Viewer) Init() tea.Cmd { return tea.Batch(v.load, tick(), motionTick()) }
-func (v Viewer) focus() string {
-	if v.State == nil || v.State.Layout == nil {
+func focusInLayout(layout *Layout, selected int) string {
+	if layout == nil {
 		return ""
 	}
-	panels := leaves(v.State.Layout.Root)
+	panels := leaves(layout.Root)
 	if len(panels) == 0 {
 		return ""
 	}
-	return panels[v.Selected%len(panels)].ID
+	return panels[max(0, selected)%len(panels)].ID
 }
+func (v Viewer) focus() string { return focusInLayout(v.canvasLayout(), v.Selected) }
 func (v *Viewer) scroll(delta int, home bool) {
 	if v.Page != 0 {
 		v.Offset = max(0, v.Offset+delta)
@@ -94,10 +98,11 @@ func (v *Viewer) scroll(delta int, home bool) {
 // two-dimensional natural canvas with viewport-sized upper bounds.
 func (v Viewer) dagScrollLimits(id string) (int, int) {
 	unbounded := int(^uint(0) >> 1)
-	if v.State == nil || v.State.Layout == nil {
+	layout := v.canvasLayout()
+	if layout == nil {
 		return unbounded, unbounded
 	}
-	for _, p := range leaves(v.State.Layout.Root) {
+	for _, p := range leaves(layout.Root) {
 		if p.ID != id || p.Kind != "dag" || p.DAG == nil {
 			continue
 		}
@@ -117,7 +122,7 @@ func (v Viewer) dagScrollLimits(id string) (int, int) {
 		}
 		w = min(w, 1000)
 		h = min(h, 500)
-		cw, ch, ok := panelDimensions(v.State.Layout.Root, id, w, h-4)
+		cw, ch, ok := panelDimensions(layout.Root, id, w, h-4)
 		if !ok || cw < 8 || ch < 4 {
 			return 0, 0
 		}
@@ -156,18 +161,30 @@ func (v Viewer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			v.anchorEventHistory(m.state)
 			v.reconcileLinks(m.state)
 			v.State = m.state
-			if v.State.Layout != nil {
-				for i, p := range leaves(v.State.Layout.Root) {
+			if layout := v.canvasLayout(); layout != nil {
+				found := false
+				for i, p := range leaves(layout.Root) {
 					if p.ID == id {
 						v.Selected = i
+						found = true
 					}
 				}
+				if !found {
+					v.Selected = 0
+				}
+				v.prunePresentationState(layout)
 			}
 			v.baselineOnLoad = false
 			v.Error = ""
 		}
 	case tickMsg:
 		if v.Paused {
+			// Semantic monitoring is observation, not presentation motion. Keep
+			// mailbox discovery alive while snapshot messages remain rejected
+			// by the pause/epoch guard above.
+			if v.State != nil && v.State.Layout != nil && hasAgentScope(v.State.Layout.Root) {
+				return v, tea.Batch(v.load, tick())
+			}
 			return v, tick()
 		}
 		return v, tea.Batch(v.load, tick())
@@ -223,8 +240,8 @@ func (v Viewer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "pgup":
 			v.scroll(-10, false)
 		case "left", "right":
-			if v.Page == 0 && v.State != nil && v.State.Layout != nil {
-				for _, p := range leaves(v.State.Layout.Root) {
+			if layout := v.canvasLayout(); v.Page == 0 && layout != nil {
+				for _, p := range leaves(layout.Root) {
 					if p.ID == v.focus() && p.Kind == "dag" {
 						if v.XOffsets == nil {
 							v.XOffsets = map[string]int{}
@@ -335,6 +352,7 @@ func (v Viewer) Render(now time.Time) string {
 	// DAG node, binding inspector and echo-key lookup.
 	frameState := *s
 	frameState.observation = observations(s, now)
+	frameState.Layout = presentationLayout(&frameState, now)
 	s = &frameState
 	label := "OBSERVED TELEMETRY"
 	if s.Demo {
@@ -399,11 +417,11 @@ func (v Viewer) Render(now time.Time) string {
 		if v.Page != 0 {
 			offsets = map[string]int{root.ID: v.Offset}
 		}
-		focus := v.focus()
+		focus := focusInLayout(s.Layout, v.Selected)
 		if v.Page != 0 {
 			focus = root.ID
 		}
-		lines = append(lines, renderPanel(root, s, w, bodyH, now, canvasOptions{Focus: focus, Offsets: offsets, XOffsets: v.XOffsets, Hidden: &hidden, Motion: !v.MotionOff, Clock: motionNow, Links: v.Links, Echo: v.Echo, EchoNow: now, EchoMotion: !v.MotionOff && !v.Paused && !v.quietEcho()})...)
+		lines = append(lines, renderPanel(root, s, w, bodyH, now, canvasOptions{Focus: focus, Offsets: offsets, XOffsets: v.XOffsets, Hidden: &hidden, Motion: !v.MotionOff, Clock: motionNow, Links: v.Links, Echo: v.Echo, EchoNow: now, EchoMotion: !v.MotionOff && !v.Paused && !v.Help && v.Page == 0 && v.Offsets[focus] == 0})...)
 	}
 	since := "no hooks observed"
 	if s.LastHook > 0 {

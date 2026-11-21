@@ -50,6 +50,7 @@ def run(repo, tag, version, expected_checksums=None):
     host_os = {"Darwin": "darwin", "Linux": "linux", "Windows": "windows"}.get(platform.system())
     host_arch = {"arm64": "arm64", "aarch64": "arm64", "x86_64": "amd64", "amd64": "amd64"}.get(platform.machine().lower())
     host_target = f"{host_os}-{host_arch}"
+    dynamic = tuple(map(int, version.split(".")[:2])) >= (0, 3)
     output_dir = Path(__file__).resolve().parents[1] / "target"
     output_dir.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="release-smoke.", dir=output_dir) as tmp:
@@ -68,6 +69,9 @@ def run(repo, tag, version, expected_checksums=None):
                             "bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256",
                             "docs/PANELS.md", "docs/DAG.md", "docs/REX.md",
                             "docs/OBSERVATIONS.md", "examples/rex/records.template.layout.json")
+                if dynamic:
+                    required += ("docs/DYNAMIC.md", "examples/dynamic/README.md",
+                                 "examples/dynamic/actors.layout.json", "examples/dynamic/programs.layout.json")
                 assert all("agent-dashboard/" + p in members for p in required), "incomplete skill package"
                 assert any(p.startswith("agent-dashboard/examples/") for p in members)
                 assert not any("/prototypes/" in p or "/.scratch/" in p or p.endswith(".py") for p in members)
@@ -90,7 +94,18 @@ def run(repo, tag, version, expected_checksums=None):
                     capabilities = json.loads(subprocess.check_output([str(executable), "capabilities"], env=env, text=True))
                     assert capabilities["version"] == version
                     assert {"rex-local-open-v1", "rex-observer-v1", "observation-bindings-v1"} <= set(capabilities["features"])
+                    if dynamic:
+                        assert {"dynamic-layout-v1", "agent-scope-v1"} <= set(capabilities["features"])
+                        scope = Path(tmp) / "scope.json"
+                        subprocess.run([str(executable), "scope-init", "--file", str(scope),
+                                        "--criterion", "Synthetic public package smoke; no model invoked."], env=env, check=True)
+                        subprocess.run([str(executable), "scope-close", "--file", str(scope)], env=env, check=True)
+                        closed = json.loads(subprocess.check_output([str(executable), "scope-watch", "--file", str(scope),
+                                                                    "--duration", "1"], env=env, text=True))
+                        assert closed["closed"] and not closed["requests"], "scope-watch closure failed"
                     examples = sorted((skill / "examples").rglob("*.json"))
+                    if dynamic:
+                        assert len(examples) == 19, "expected all current bundled layouts"
                     for example in examples:
                         layout = json.loads(example.read_text())
                         if "root" not in layout:
@@ -110,8 +125,8 @@ def run(repo, tag, version, expected_checksums=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default="shihaonan369/skills")
-    parser.add_argument("--tag", default="agent-dashboard-v0.2.0")
-    parser.add_argument("--version", default="0.2.0")
+    parser.add_argument("--tag", default="agent-dashboard-v0.3.0")
+    parser.add_argument("--version", default="0.3.0")
     parser.add_argument("--expected-checksums", help="reviewed local archive-only SHA256SUMS to match byte-for-byte")
     args = parser.parse_args()
     try:

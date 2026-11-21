@@ -210,3 +210,22 @@ matches this executable's exact command+args only; it keeps unrelated handlers,
 settings, skills, telemetry, backups and open viewers. Skill linking refuses to
 replace an existing foreign path/directory. No source changes to Claude or Rex.
 Moving the binary requires uninstalling at the old location before reinstalling.
+
+## Dynamic presentation and caller-owned classification
+
+Version 0.3.0 adds one pure materialization step between normalized observations
+and the split-tree renderer. Identity-based selection, repeats and generated DAG
+nodes use the same observation seam. Focus, links, scrolling and history use the
+same effective tree, while authored layouts and telemetry remain unchanged.
+
+Optional private scope mailboxes are refreshed only at observation load, not by
+rendering or animation. The dashboard discovers candidates and consumes explicit
+fingerprinted replies; it never owns an LLM client, native agent dispatcher or
+terminal/role inference. The initiating harness preferably supplies one native
+background subagent for initial and later decisions. A worker-owned Monitor can
+consume the bounded, deduplicated `scope-watch` JSON-line event source; watch
+renewal stays in that worker's context. The command only watches mailbox changes,
+not the model or conversation. Background long polling, bounded foreground
+delegation and finally main-agent checkpoints are explicit capability fallbacks.
+Unknown/missing judgements are excluded. See DYNAMIC.md for protocol, privacy,
+budgets, failure semantics, shutdown and honest runtime acceptance boundaries.

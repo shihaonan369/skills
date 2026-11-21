@@ -15,6 +15,8 @@ type Binding struct {
 	Actor   string `json:"actor,omitempty"`
 	Task    string `json:"task,omitempty"`
 	Program string `json:"program,omitempty"`
+	Source  string `json:"source,omitempty"`
+	Item    bool   `json:"item,omitempty"`
 }
 
 func validProgramKey(id string) bool {
@@ -22,7 +24,10 @@ func validProgramKey(id string) bool {
 }
 func (b Binding) validate() error {
 	count := 0
-	for _, id := range []string{b.Actor, b.Task, b.Program} {
+	if b.Item {
+		count++
+	}
+	for _, id := range []string{b.Actor, b.Task, b.Program, b.Source} {
 		if id != "" {
 			count++
 		}
@@ -31,7 +36,10 @@ func (b Binding) validate() error {
 		}
 	}
 	if count != 1 {
-		return errors.New("bind requires exactly one actor, task or program")
+		return errors.New("bind requires exactly one actor, task, program, source or template item")
+	}
+	if b.Source != "" && len(b.Source) > 80 {
+		return errors.New("source binding exceeds 80 bytes")
 	}
 	if b.Program != "" && !validProgramKey(b.Program) {
 		return errors.New("program binding requires a full source-qualified Rex key")
@@ -45,6 +53,9 @@ func (b Binding) label() string {
 	if b.Task != "" {
 		return "Task " + b.Task
 	}
+	if b.Source != "" {
+		return "Rex source " + b.Source
+	}
 	return "Rex program " + b.Program
 }
 
@@ -52,8 +63,9 @@ func (b Binding) label() string {
 // factual rows. Adapters own semantics, unknown values and state classification;
 // panels own geometry only. No adapter writes into another source's collections.
 type observationEntity struct {
-	Source                             string
-	Rows                               []reportRow
+	Source, Label                      string
+	Role, Context, IdentityMetadata    string
+	Rows, CompactRows                  []reportRow
 	Status, Prefix                     string
 	Running, Success, Alert, LastKnown bool
 	Keys                               []echoKey
@@ -65,7 +77,9 @@ type observationEvent struct {
 }
 type observationView struct {
 	Entities                map[Binding]observationEntity
+	ScopeResults            map[string]Scope
 	Actors, Tasks, Programs []Binding
+	SourceBindings          []Binding
 	Session                 []reportRow
 	Summaries               []observationEntity
 	EmptyActors, EmptyTasks string
@@ -78,10 +92,14 @@ func observations(s *State, now time.Time) *observationView {
 	if s.observation != nil {
 		return s.observation
 	}
+	var v *observationView
 	if s.ProgramReports != nil {
-		return rexObservations(s, now)
+		v = rexObservations(s, now)
+	} else {
+		v = claudeObservations(s, now)
 	}
-	return claudeObservations(s, now)
+	v.ScopeResults = s.scopeResults
+	return v
 }
 func stateEntity(rows []reportRow, status, prefix string, keys []echoKey) observationEntity {
 	return observationEntity{Rows: rows, Status: status, Prefix: prefix, Keys: keys,
@@ -112,7 +130,10 @@ func claudeObservations(s *State, now time.Time) *observationView {
 		if a.Status == "running" {
 			keys = append(keys, actorKey(id, "tools"))
 		}
-		v.Entities[b] = stateEntity(rows, a.Status, prefix, keys)
+		e := stateEntity(rows, a.Status, prefix, keys)
+		e.Label = Clean(a.Role, 80) + " · " + Clean(a.ID, 80)
+		e.Role, e.Context = a.Role, fmt.Sprintf("Claude:%s:%d:%d", s.Session, s.Started, a.Started)
+		v.Entities[b] = e
 		sort.Strings(calls[id])
 		for field, value := range map[string]string{"status": a.Status, "role": a.Role, "model": a.Model, "tools": strconv.Itoa(a.Tools), "errors": strconv.Itoa(a.Errors), "active": strings.Join(calls[id], "\n"), "progress": s.Progress(id)} {
 			v.Values[actorKey(id, field)] = value
@@ -124,7 +145,11 @@ func claudeObservations(s *State, now time.Time) *observationView {
 	for id, t := range s.Tasks {
 		b := Binding{Task: id}
 		rows := []reportRow{{text: fmt.Sprintf("#%s [%s] %s", Clean(t.ID, 120), Clean(t.Status, 80), Clean(t.Subject, 240)), keys: []echoKey{taskKey(id, "status"), taskKey(id, "subject")}}, {text: "owner " + unknown(t.Owner) + " | blocked by " + Clean(strings.Join(t.BlockedBy, ", "), 400), keys: []echoKey{taskKey(id, "owner"), taskKey(id, "blocked")}}}
-		v.Entities[b] = stateEntity(rows, t.Status, "", []echoKey{taskKey(id, "status")})
+		e := stateEntity(rows, t.Status, "", []echoKey{taskKey(id, "status")})
+		e.Label = "#" + Clean(id, 80) + " · " + Clean(t.Subject, 80)
+		e.IdentityMetadata = "subject=" + Clean(t.Subject, 240) + "; owner=" + Clean(t.Owner, 120)
+		e.Context = fmt.Sprintf("Claude:%s:%d", s.Session, s.Started)
+		v.Entities[b] = e
 		for field, value := range map[string]string{"status": t.Status, "subject": t.Subject, "owner": t.Owner, "blocked": strings.Join(t.BlockedBy, "\n")} {
 			v.Values[taskKey(id, field)] = value
 		}
@@ -166,6 +191,8 @@ func (v *observationView) resolve(b Binding) (observationEntity, bool) {
 		keys = []echoKey{taskKey(b.Task, "status")}
 	case b.Program != "":
 		keys = []echoKey{programKey(b.Program)}
+	case b.Source != "":
+		keys = []echoKey{sourceKey(b.Source)}
 	}
 	return observationEntity{Rows: []reportRow{{text: b.label()}, {text: "Not observed; state/model/progress unknown", keys: keys}}, Keys: keys}, false
 }
@@ -178,6 +205,10 @@ func (v *observationView) matches(p Panel, b Binding) bool {
 	return contains(p.Sources, e.Source) && (len(p.ProgramIDs) == 0 || b.Program != "" && contains(p.ProgramIDs, b.Program))
 }
 func (v *observationView) selection(p Panel) []Binding {
+	if p.Select != nil {
+		selected, _ := v.selected(*p.Select)
+		return selected
+	}
 	if p.Bind != nil {
 		return []Binding{*p.Bind}
 	}
@@ -241,6 +272,15 @@ func (v *observationView) rows(p Panel) []reportRow {
 			e := events[i]
 			out = append(out, reportRow{text: time.UnixMilli(e.Time).Format("15:04:05") + " · " + Clean(e.Actor, 120) + " · " + Clean(e.Text, 400)})
 		}
+		if p.Select != nil {
+			if scope := v.scopeNotice(*p.Select); scope != "" {
+				out = append(out, reportRow{text: scope})
+			}
+			_, omitted := v.selected(*p.Select)
+			if omitted > 0 {
+				out = append(out, reportRow{text: selectionNotice(omitted)})
+			}
+		}
 		return out
 	}
 	out := []reportRow{}
@@ -249,7 +289,11 @@ func (v *observationView) rows(p Panel) []reportRow {
 			continue
 		}
 		e, _ := v.resolve(b)
-		out = append(out, e.Rows...)
+		if p.Kind == "programs" && p.Compact && len(e.CompactRows) > 0 {
+			out = append(out, e.CompactRows...)
+		} else {
+			out = append(out, e.Rows...)
+		}
 		if p.Kind == "agents" {
 			out = append(out, reportRow{})
 		}
@@ -258,17 +302,26 @@ func (v *observationView) rows(p Panel) []reportRow {
 		message := "No matching observations; state/progress unknown."
 		if p.Kind == "tasks" {
 			message = "No reported tasks; progress unknown."
-			if v.EmptyTasks != "" && len(p.ProgramIDs) == 0 && len(p.Bindings) == 0 {
+			if v.EmptyTasks != "" && len(p.ProgramIDs) == 0 && len(p.Bindings) == 0 && p.Select == nil {
 				message = v.EmptyTasks
 			}
 		}
 		if p.Kind == "agents" {
 			message = "No matching workers observed since opt-in. No parentage or model inferred."
-			if v.EmptyActors != "" && len(p.ProgramIDs) == 0 && len(p.Bindings) == 0 {
+			if v.EmptyActors != "" && len(p.ProgramIDs) == 0 && len(p.Bindings) == 0 && p.Select == nil {
 				message = v.EmptyActors
 			}
 		}
 		out = []reportRow{{text: message}}
+	}
+	if p.Select != nil {
+		if scope := v.scopeNotice(*p.Select); scope != "" {
+			out = append(out, reportRow{text: scope})
+		}
+		_, omitted := v.selected(*p.Select)
+		if omitted > 0 {
+			out = append(out, reportRow{text: selectionNotice(omitted)})
+		}
 	}
 	return out
 }
@@ -276,10 +329,13 @@ func (v *observationView) rows(p Panel) []reportRow {
 // All record widgets cross this one seam. Source-specific behavior belongs in
 // the two adapters above/below, not in the renderer, DAG, echo or link inspector.
 func observationRows(p Panel, s *State, now time.Time) []reportRow {
-	if p.Kind == "programs" {
+	if p.notice != "" {
+		return []reportRow{{text: p.notice}}
+	}
+	if p.Kind == "programs" && p.Select == nil && p.Bind == nil && len(p.Bindings) == 0 {
 		return programRows(p, s, now)
 	}
-	if p.Kind == "sources" {
+	if p.Kind == "sources" && p.Select == nil && p.Bind == nil && len(p.Bindings) == 0 {
 		return sourceRows(p, s, now)
 	}
 	if p.Kind == "text" {
@@ -296,15 +352,20 @@ func textRows(lines []string) []reportRow {
 }
 
 func (v *observationView) matchingEvents(p Panel) []Event {
+	selected := p.Bindings
+	if p.Bind != nil || p.Select != nil {
+		selected = v.selection(p)
+	}
+	filtered := p.Select != nil || p.Bind != nil || len(p.Bindings) > 0
 	out := []Event{}
 	for _, e := range v.Events {
 		if !contains(p.Sources, e.Source) || len(p.Actors) > 0 && !contains(p.Actors, e.Binding.Actor) || len(p.ProgramIDs) > 0 && (e.Binding.Program == "" || !contains(p.ProgramIDs, e.Binding.Program)) {
 			continue
 		}
-		if len(p.Bindings) > 0 {
+		if filtered {
 			found := false
-			for _, b := range p.Bindings {
-				found = found || b == e.Binding
+			for _, b := range selected {
+				found = found || b == e.Binding || b.Source != "" && b.Source == e.Source
 			}
 			if !found {
 				continue

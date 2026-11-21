@@ -70,6 +70,29 @@ an older installation, preserve integrity pins and verify the actual executable.
   explain the actual boundary. A program report is not a substitute for a
   requested full agent adapter without agreement on the narrower scope.
 
+### Live membership and semantic monitoring scope
+
+For new agents/programs joining an existing canvas, role-specific monitoring, or
+any dynamically repeated cards/lists/graphs, read **`docs/DYNAMIC.md` in full**.
+Require `dynamic-layout-v1`; semantic membership additionally requires
+`agent-scope-v1`. These require version 0.3.0 or later; 0.2.0 assets lack them.
+Check the actual executable; source pins follow README.md's two-phase release
+lifecycle. Report a missing capability; do not silently upgrade.
+
+The initiating agent interprets the user's scope. Use exact reported metadata
+filters only when grounded; semantic labels such as “implement agents” are not
+an excuse to guess roles or include every general-purpose agent. Initialize a
+private scope mailbox and publish shared selectors. Delegate **both initial and
+subsequent semantic decisions to the same native background subagent** where
+supported; the main agent supplies scope/context and starts/stops the worker,
+not an initial classification pass. For Claude Code, prefer a worker-owned
+**Monitor** running `scope-watch`; the worker handles existing candidates, later
+events and bounded watch renewal in its own context. Follow DYNAMIC.md's actual
+capability checks, worker protocol, budgets and stop procedure. Fall back to
+background-worker long polling, then foreground subagent batches; use the main
+agent only without usable subagents. Disclose gaps and verify real worker
+activity. The dashboard never launches Claude/Pi or calls a model API.
+
 ### Claude hook readiness
 
 Run `<D> doctor`. If hooks are missing, explain that Claude settings must change,

@@ -98,7 +98,7 @@ func build() error {
 }
 
 func packageFiles(binary string) ([]string, error) {
-	files := []string{"SKILL.md", "README.md", "bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256", "docs/ARCHITECTURE.md", "docs/VALIDATION.md", "docs/PANELS.md", "docs/DAG.md", "docs/REX.md", "docs/OBSERVATIONS.md", binary, "LICENSES.txt"}
+	files := []string{"SKILL.md", "README.md", "bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256", "docs/ARCHITECTURE.md", "docs/VALIDATION.md", "docs/PANELS.md", "docs/DAG.md", "docs/REX.md", "docs/OBSERVATIONS.md", "docs/DYNAMIC.md", binary, "LICENSES.txt"}
 	err := filepath.WalkDir("examples", func(p string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err

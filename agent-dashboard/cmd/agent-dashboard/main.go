@@ -38,6 +38,12 @@ Commands:
                         [--presentation auto|rex|terminal]
   rex-sources           [--current=false] [--host LABEL (repeat)]
   rex-watch             --sources @file [--layout @file] [--plain | --status]
+  scope-init            --file PATH --criterion TEXT (private agent mailbox)
+  scope-watch           --file PATH [--duration 1..1800] (JSON-line monitor events)
+  scope-poll            --file PATH [--wait 0..60] (bounded pending requests)
+  scope-decide          --file PATH --json @decisions.json
+  scope-status          --file PATH (requests, decisions and provenance)
+  scope-close           --file PATH (asks the classifier worker to stop)
   capabilities          (machine-readable optional feature discovery)
   demo                  [--json @layout.json] (synthetic isolated preview)
   hook                  (internal, JSON stdin; always fail-open)
@@ -83,7 +89,10 @@ func run(args []string, in io.Reader, out io.Writer) error {
 		return nil
 	}
 	if command == "capabilities" {
-		return json.NewEncoder(out).Encode(map[string]any{"version": buildinfo.Version, "features": []string{"rex-observer-v1", "rex-local-open-v1", "observation-bindings-v1"}})
+		return json.NewEncoder(out).Encode(map[string]any{"version": buildinfo.Version, "features": []string{"rex-observer-v1", "rex-local-open-v1", "observation-bindings-v1", "dynamic-layout-v1", "agent-scope-v1"}})
+	}
+	if strings.HasPrefix(command, "scope-") {
+		return runScope(command, args[1:], out)
 	}
 	if command == "rex-sources" || command == "rex-watch" || command == "open" {
 		return runRex(command, args[1:], out)
@@ -214,6 +223,10 @@ func run(args []string, in io.Reader, out io.Writer) error {
 	case "tui":
 		if *plain {
 			s, e := d.Snapshot(root, *session)
+			if e != nil {
+				return e
+			}
+			s, e = d.PreparePresentation(s)
 			if e != nil {
 				return e
 			}

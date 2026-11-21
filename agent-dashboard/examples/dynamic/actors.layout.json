@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "Caller-selected live implementation records",
+  "root": {
+    "kind": "column",
+    "children": [
+      {"id":"workers","kind":"dag","size":18,"dag":{"version":1,"select":{"kind":"actors","roles":["implement"]},"nodes":[],"node":{"color":"blue"}}},
+      {"id":"cards","kind":"agent","size":12,"bind":{"item":true},"repeat":{"select":{"kind":"actors","roles":["implement"]},"direction":"row","stack_below":90}},
+      {"id":"list","kind":"agents","select":{"kind":"actors","roles":["implement"]}}
+    ]
+  }
+}
