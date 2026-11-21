@@ -35,7 +35,7 @@ function Receive-Asset([Uri] $Uri, [string] $Path, [long] $Limit) {
         $request.AllowAutoRedirect = $false
         $request.Timeout = 60000
         $request.ReadWriteTimeout = 60000
-        $request.UserAgent = 'agent-dashboard-bootstrap/0.2.0'
+        $request.UserAgent = 'agent-dashboard-bootstrap/0.3.0'
         $response = $request.GetResponse()
         try {
             $code = [int] $response.StatusCode
@@ -116,7 +116,7 @@ try {
     if ($null -ne $existing) { Write-Output $existing; return }
     $stage = Join-Path $directory ('.bootstrap.' + [Guid]::NewGuid().ToString('N'))
     [void] [IO.Directory]::CreateDirectory($stage)
-    $version = '0.2.0'
+    $version = '0.3.0'
     $asset = "agent-dashboard-$version-$target.zip"
     $base = "https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v$version"
     $expected = Get-ArchiveChecksum (Join-Path $PSScriptRoot 'bootstrap.sha256') $asset

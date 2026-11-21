@@ -73,7 +73,7 @@ done
 locked=1
 if existing; then exit 0; fi
 stage=$(mktemp -d "$directory/.bootstrap.XXXXXX")
-version=0.2.0
+version=0.3.0
 asset=agent-dashboard-$version-$target.zip
 base=https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v$version
 

@@ -7,6 +7,43 @@ into ignored `.build-tools/go/`; no system-wide toolchain/runtime installed.
 Claude Code used for historical integration checks: **2.1.312**.
 Distribution builds are unsigned; release assets are not signed/notarized packages.
 
+## Published 0.3.0 and source-main pins (2026-11-21)
+
+Published [Agent Dashboard v0.3.0](https://github.com/shihaonan369/skills/releases/tag/agent-dashboard-v0.3.0)
+at **2026-11-21 14:39:54 UTC** and verified it resolves as Latest. Release-code
+commit: `cf8a442b4f0d03354518b4fbb763b14487af85ec`. Annotated tag:
+`agent-dashboard-v0.3.0`, tag object `993cf2e158e82e5927813292731df44d6ac6a749`.
+
+- The draft contained exactly **six platform ZIPs + archive-only SHA256SUMS**.
+  All seven asset sizes/server SHA-256 digests matched reviewed local files;
+  authenticated draft downloads also matched every local asset.
+- After publication, `tests/release_smoke.py --tag agent-dashboard-v0.3.0
+  --version 0.3.0 --expected-checksums <reviewed-local-manifest>` passed anonymous
+  public downloads of all six ZIPs and the manifest. The public manifest matched
+  local bytes exactly. Checks covered platform membership, package paths/docs,
+  privacy patterns and native startup, scope-watch closure, five capabilities,
+  all **19** bundled examples and isolated synthetic rendering.
+- Only after that public verification, source-main bootstrap constants and all
+  six trusted archive hashes were repinned to **0.3.0** in a separate follow-up.
+  Release tags/ZIPs retain their preceding acquisition pins and were not rebuilt,
+  moved or overwritten. Prebundled helpers reuse the matching included binary.
+- A fresh source-like directory with spaces downloaded the public release
+  anonymously through the actual helper, verified its checksums, installed only
+  the native executable atomically, and matched the reviewed package binary.
+  Version/capabilities passed; offline reuse succeeded with HTTPS/hash/ZIP tools
+  absent from PATH. Locks/staging files were removed and instructions/pins were
+  unchanged by setup. The disposable installation was removed afterward.
+- Post-repin regression again passed **113 Go top-level tests + 74 subtests** with
+  race/coverage enabled and two conditional skips, `go vet`, and all **20 POSIX +
+  14 PowerShell** bootstrap tests. PowerShell ran on macOS, not native Windows.
+- Original **0.1.0 and 0.2.0 release/asset IDs, names, sizes and digests** were
+  compared to pre-release snapshots and are unchanged.
+
+These checks do **not** establish native background-subagent/Monitor/LLM
+integration or foreign-platform runtime support; the acceptance boundaries in
+the preparation section below still apply. No installed production binary,
+application settings/hooks, private layout or Rex configuration was changed.
+
 ## Version 0.3.0 release preparation (2026-11-21)
 
 The user authorized commit, push and release after the two-axis review. This

@@ -55,7 +55,7 @@ func TestBundledBootstrapPinsCoverPublishedPlatforms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	re := regexp.MustCompile(`(?m)^[0-9a-f]{64}  agent-dashboard-0\.2\.0-((?:darwin|linux|windows)-(?:arm64|amd64))\.zip$`)
+	re := regexp.MustCompile(`(?m)^[0-9a-f]{64}  agent-dashboard-0\.3\.0-((?:darwin|linux|windows)-(?:arm64|amd64))\.zip$`)
 	matches := re.FindAllStringSubmatch(string(raw), -1)
 	seen := map[string]bool{}
 	for _, match := range matches {
@@ -73,7 +73,7 @@ func TestReleaseManifestUsesDownloadFilenames(t *testing.T) {
 	dir := t.TempDir()
 	var files []string
 	var want strings.Builder
-	for _, name := range []string{"agent-dashboard-0.2.0-darwin-arm64.zip", "agent-dashboard-0.2.0-windows-amd64.zip"} {
+	for _, name := range []string{"agent-dashboard-0.3.0-darwin-arm64.zip", "agent-dashboard-0.3.0-windows-amd64.zip"} {
 		content := []byte("synthetic archive: " + name)
 		path := filepath.Join(dir, name)
 		if err := os.WriteFile(path, content, 0600); err != nil {
