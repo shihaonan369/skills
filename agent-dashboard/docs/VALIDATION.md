@@ -1,11 +1,41 @@
-# Validation matrix · version 0.3.0
+# Validation matrix · source 0.4.0-dev
 
-Latest checks recorded **2026-11-21 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
+Latest checks recorded **2026-11-23 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
 Historical sections below retain their original scope.
 Local build toolchain: **Go 1.27.4**, archive SHA-256 checked before extraction
 into ignored `.build-tools/go/`; no system-wide toolchain/runtime installed.
 Claude Code used for historical integration checks: **2.1.312**.
 Distribution builds are unsigned; release assets are not signed/notarized packages.
+
+## External data bindings, source-only 0.4.0-dev (2026-11-23)
+
+Implemented shared file snapshots, JSON-pointer value bindings, safe formatting,
+freshness/failure diagnostics, text values, all nine leaf titles, static and
+dynamic DAG labels, and an optional native atomic `data-write` producer. Values
+are not native telemetry, classification evidence or inferred entity state.
+No commit/push/release or installed-binary/settings/hooks/private-layout/Rex
+changes are part of this implementation. Stable bootstrap pins remain 0.3.0.
+
+| Scope | Result / exact boundary |
+| --- | --- |
+| Red/green integration | Initial shared text/title/DAG test failed with `json: unknown field "data_sources"` before production code; passed after implementation. The test also proves subsequent rendering uses cached snapshots, refreshes need no layout rewrite, and raw values are not serialized into native state |
+| Go regression | `go test -count=1 -race -cover -json ./...`: **121 top-level tests + 111 subtests**, **2 conditional skips**; `go vet ./...` passed. Coverage: dashboard **90.1%**, CLI **72.6%**, Rex observer **88.7%**, packager **25.3%** |
+| Shared-value coverage | All nine leaf titles, repeated text/dynamic DAG templates, static DAG edges, native and Rex states; exact text/numbers, percent/bar, pointers/arrays/escapes, remaining seconds versus explicit deadline, freshness/clock skew, unavailable/corrupt/oversized/symlink/directory sources, invalid updates and recovery, unchanged serialized native/Rex data and caller declarations |
+| Real external producers | The documented POSIX shell and PowerShell countdown snippets each ran with a shortened two-second budget against the native executable and published a final zero. PowerShell ran on macOS, not native Windows/5.1 |
+| New native PTY | Live file publication updates text/title/DAG in the real viewer while native session state stays byte-identical. Missing-source recovery, pause/freshness-clock freeze, resume, stale/corrupt diagnostics, recovery, resize, q/terminal restore and cleanup passed. Explicitly synthetic data, not agent/harness telemetry |
+| Regression PTY | Three further macOS runs passed: dynamic scope-watch with synthetic decisions, all-panel synthetic Rex observations, and DAG fanout effects/controls/resize |
+| Bootstrap and Rex Lua | All **20 POSIX + 14 PowerShell** bootstrap tests passed; existing optional official Rex Lua contract passed with synthetic API data. No remote telemetry submission or configuration change |
+| Development packages | Six **0.4.0-dev** platform ZIPs built in an isolated ignored workspace; **12 local + 6 archive-only** hashes verified. Packages include DATA.md, countdown guidance/template and **20 JSON examples**, with one matching binary and no development runtime/test/source/legacy files |
+| Extracted native package | Offline prebundled bootstrap reuse with network/hash/ZIP tools absent from PATH, exact development version and six capabilities, all 20 layouts (caller-template file paths substituted in temporary copies), synthetic plain frame and the new external-data PTY passed |
+
+Only **macOS arm64** runtime is verified. The other five targets are cross-builds,
+not native Linux/Windows acceptance; Windows ACL privacy and PowerShell 5.1 remain
+unverified. Builds are unsigned/not notarized. Local-file refresh is best effort,
+not a hard real-time filesystem guarantee. This feature needs no model or native
+subagent; it does not change the previous unverified real background-worker /
+Monitor / LLM acceptance boundary. No public artifacts were published or repinned.
+Logs and isolated package workspace pointers are under ignored `target/` with
+`external-data-*` names.
 
 ## Published 0.3.0 and source-main pins (2026-11-21)
 

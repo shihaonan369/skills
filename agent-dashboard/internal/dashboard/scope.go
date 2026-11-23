@@ -253,7 +253,7 @@ func DecideScope(path string, raw []byte) error {
 }
 
 // PreparePresentation runs only at observation refresh, never during rendering.
-// Only explicitly referenced, preinitialized scope files can be touched.
+// Only caller-declared data files and explicitly referenced scope mailboxes can be touched.
 func PreparePresentation(s *State) (*State, error) {
 	if s == nil || s.Layout == nil {
 		return s, nil
@@ -261,6 +261,10 @@ func PreparePresentation(s *State) (*State, error) {
 	if err := validateDynamicSyntax(&s.Layout.Root, ""); err != nil {
 		return nil, err
 	}
+	if err := validateDataBindings(s.Layout); err != nil {
+		return nil, err
+	}
+	s = prepareExternalData(s, time.Now())
 	v := observations(s, time.Time{})
 	groups := map[string][]Selection{}
 	var collect func(Panel)

@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "name": "Caller-owned external countdown",
+  "data_sources": {
+    "timer": {
+      "type": "json-file",
+      "path": "/private/agent-dashboard/countdown.json",
+      "stale_after_ms": 3000
+    }
+  },
+  "root": {
+    "kind": "column",
+    "children": [
+      {
+        "id": "countdown",
+        "kind": "text",
+        "title": "External producer countdown",
+        "size": 7,
+        "value": {
+          "source": "timer",
+          "path": "/remaining_seconds",
+          "format": "mm:ss",
+          "prefix": "Remaining: "
+        }
+      },
+      {
+        "id": "timer-graph",
+        "kind": "dag",
+        "dag": {
+          "version": 1,
+          "nodes": [
+            {
+              "id": "timer",
+              "label_value": {
+                "source": "timer",
+                "path": "/remaining_seconds",
+                "format": "mm:ss",
+                "prefix": "Remaining: "
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -38,6 +38,7 @@ Commands:
                         [--presentation auto|rex|terminal]
   rex-sources           [--current=false] [--host LABEL (repeat)]
   rex-watch             --sources @file [--layout @file] [--plain | --status]
+  data-write            --file PATH --json JSON|@file|- (atomic external data)
   scope-init            --file PATH --criterion TEXT (private agent mailbox)
   scope-watch           --file PATH [--duration 1..1800] (JSON-line monitor events)
   scope-poll            --file PATH [--wait 0..60] (bounded pending requests)
@@ -89,7 +90,10 @@ func run(args []string, in io.Reader, out io.Writer) error {
 		return nil
 	}
 	if command == "capabilities" {
-		return json.NewEncoder(out).Encode(map[string]any{"version": buildinfo.Version, "features": []string{"rex-observer-v1", "rex-local-open-v1", "observation-bindings-v1", "dynamic-layout-v1", "agent-scope-v1"}})
+		return json.NewEncoder(out).Encode(map[string]any{"version": buildinfo.Version, "features": []string{"rex-observer-v1", "rex-local-open-v1", "observation-bindings-v1", "dynamic-layout-v1", "agent-scope-v1", "file-data-bindings-v1"}})
+	}
+	if command == "data-write" {
+		return runDataWrite(args[1:], in, out)
 	}
 	if strings.HasPrefix(command, "scope-") {
 		return runScope(command, args[1:], out)

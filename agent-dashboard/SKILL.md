@@ -93,6 +93,19 @@ background-worker long polling, then foreground subagent batches; use the main
 agent only without usable subagents. Disclose gaps and verify real worker
 activity. The dashboard never launches Claude/Pi or calls a model API.
 
+### External values and script-owned countdowns
+
+For external variables, countdowns, numeric/percentage displays or script-fed
+titles/DAG labels, read **`docs/DATA.md` in full**. Require
+`file-data-bindings-v1` (source 0.4.0-dev, absent from published 0.3.0 and its
+bootstrap pins). Declare caller-approved `data_sources` and field bindings once;
+let the existing script publish complete JSON snapshots, optionally through
+`<D> data-write`. Verify initial data, a subsequent update, and stale/error
+behavior. Keep raw values out of native agent/task telemetry. Do not delegate
+per-second value updates to an LLM, republish the whole layout, or launch a
+producer merely because a data source was declared. The caller owns producer
+start/stop, private paths and source authorization; preserve existing installs.
+
 ### Claude hook readiness
 
 Run `<D> doctor`. If hooks are missing, explain that Claude settings must change,

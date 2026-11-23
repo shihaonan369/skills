@@ -211,6 +211,24 @@ settings, skills, telemetry, backups and open viewers. Skill linking refuses to
 replace an existing foreign path/directory. No source changes to Claude or Rex.
 Moving the binary requires uninstalling at the old location before reinstalling.
 
+## External file data and shared presentation values
+
+Source 0.4.0-dev adds `external_data.go` behind `file-data-bindings-v1`.
+`PreparePresentation` reads referenced approved local JSON paths once each per
+observation refresh into private transient state. Errors are per-source results,
+not global canvas failures. One pure pointer/freshness/format resolver serves
+text bodies, all leaf titles and static/dynamic DAG labels. The same effective
+layout drives drawing and navigation. Raw values are never serialized into
+Claude telemetry, Rex reports or semantic-classification mailboxes.
+
+The module owns strict bounded decoding, duplicate-key checks, freshness and
+clock-skew diagnostics, safe formatting, and optional `PublishDataFile` atomic
+writes. There is no hypothetical network/process adapter, expression evaluator
+or per-widget file reader. Layout parsing/rendering never opens data files.
+Entity bindings remain distinct from presentation value bindings. Producers
+run only under the caller's lifecycle; the dashboard does not dispatch scripts,
+agents or models. See DATA.md for the complete interface and trust limitations.
+
 ## Dynamic presentation and caller-owned classification
 
 Version 0.3.0 adds one pure materialization step between normalized observations

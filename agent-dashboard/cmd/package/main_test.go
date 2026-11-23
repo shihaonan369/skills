@@ -22,7 +22,7 @@ func TestPlatformPackageIncludesBootstrapWithoutDeveloperRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, required := range []string{"SKILL.md", "README.md", "bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256", "docs/REX.md", "docs/OBSERVATIONS.md", "docs/DYNAMIC.md", "examples/rex/overview.layout.json", "examples/rex/records.template.layout.json", "LICENSES.txt", binary} {
+	for _, required := range []string{"SKILL.md", "README.md", "bootstrap.sh", "bootstrap.ps1", "bootstrap.sha256", "docs/REX.md", "docs/OBSERVATIONS.md", "docs/DYNAMIC.md", "docs/DATA.md", "examples/rex/overview.layout.json", "examples/rex/records.template.layout.json", "LICENSES.txt", binary} {
 		if !slices.Contains(files, required) {
 			t.Fatalf("missing bootstrap package file %s", required)
 		}

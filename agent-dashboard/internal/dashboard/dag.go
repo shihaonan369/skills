@@ -26,20 +26,22 @@ type DAG struct {
 	Edges      []DAGEdge `json:"edges,omitempty"`
 }
 type DAGNode struct {
-	ID    string      `json:"id"`
-	Label string      `json:"label,omitempty"`
-	Color string      `json:"color,omitempty"`
-	Bind  *DAGBinding `json:"bind,omitempty"`
-	Meta  []string    `json:"meta,omitempty"`
+	LabelValue *ValueBinding `json:"label_value,omitempty"`
+	ID         string        `json:"id"`
+	Label      string        `json:"label,omitempty"`
+	Color      string        `json:"color,omitempty"`
+	Bind       *DAGBinding   `json:"bind,omitempty"`
+	Meta       []string      `json:"meta,omitempty"`
 }
 
 // DAGBinding retains the original name for source compatibility.
 type DAGBinding = Binding
 type DAGEdge struct {
-	From  string `json:"from"`
-	To    string `json:"to"`
-	Label string `json:"label,omitempty"`
-	Style string `json:"style,omitempty"`
+	LabelValue *ValueBinding `json:"label_value,omitempty"`
+	From       string        `json:"from"`
+	To         string        `json:"to"`
+	Label      string        `json:"label,omitempty"`
+	Style      string        `json:"style,omitempty"`
 }
 
 func validateDAG(g *DAG) error {

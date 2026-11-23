@@ -16,13 +16,16 @@ import (
 // Layout is caller-owned presentation, never an orchestration/workflow engine.
 // A split tree is the only composition interface; leaves bind to observed data.
 type Layout struct {
-	Version int    `json:"version"`
-	Name    string `json:"name"`
-	Root    Panel  `json:"root"`
+	Version     int                   `json:"version"`
+	Name        string                `json:"name"`
+	Root        Panel                 `json:"root"`
+	DataSources map[string]DataSource `json:"data_sources,omitempty"`
 }
 type Panel struct {
-	Select     *Selection `json:"select,omitempty"`
-	Repeat     *Repeat    `json:"repeat,omitempty"`
+	Value      *ValueBinding `json:"value,omitempty"`
+	TitleValue *ValueBinding `json:"title_value,omitempty"`
+	Select     *Selection    `json:"select,omitempty"`
+	Repeat     *Repeat       `json:"repeat,omitempty"`
 	notice     string
 	Bind       *Binding  `json:"bind,omitempty"`
 	Bindings   []Binding `json:"bindings,omitempty"`
@@ -66,6 +69,9 @@ func ParseLayout(raw []byte) (*Layout, error) {
 	}
 	l.Name = Clean(l.Name, 160)
 	if err := validateDynamicSyntax(&l.Root, ""); err != nil {
+		return nil, err
+	}
+	if err := validateDataBindings(&l); err != nil {
 		return nil, err
 	}
 	count := 0

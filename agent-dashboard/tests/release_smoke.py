@@ -51,6 +51,7 @@ def run(repo, tag, version, expected_checksums=None):
     host_arch = {"arm64": "arm64", "aarch64": "arm64", "x86_64": "amd64", "amd64": "amd64"}.get(platform.machine().lower())
     host_target = f"{host_os}-{host_arch}"
     dynamic = tuple(map(int, version.split(".")[:2])) >= (0, 3)
+    file_data = tuple(map(int, version.split(".")[:2])) >= (0, 4)
     output_dir = Path(__file__).resolve().parents[1] / "target"
     output_dir.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="release-smoke.", dir=output_dir) as tmp:
@@ -72,6 +73,9 @@ def run(repo, tag, version, expected_checksums=None):
                 if dynamic:
                     required += ("docs/DYNAMIC.md", "examples/dynamic/README.md",
                                  "examples/dynamic/actors.layout.json", "examples/dynamic/programs.layout.json")
+                if file_data:
+                    required += ("docs/DATA.md", "examples/data/README.md",
+                                 "examples/data/countdown.template.layout.json")
                 assert all("agent-dashboard/" + p in members for p in required), "incomplete skill package"
                 assert any(p.startswith("agent-dashboard/examples/") for p in members)
                 assert not any("/prototypes/" in p or "/.scratch/" in p or p.endswith(".py") for p in members)
@@ -94,6 +98,8 @@ def run(repo, tag, version, expected_checksums=None):
                     capabilities = json.loads(subprocess.check_output([str(executable), "capabilities"], env=env, text=True))
                     assert capabilities["version"] == version
                     assert {"rex-local-open-v1", "rex-observer-v1", "observation-bindings-v1"} <= set(capabilities["features"])
+                    if file_data:
+                        assert "file-data-bindings-v1" in capabilities["features"]
                     if dynamic:
                         assert {"dynamic-layout-v1", "agent-scope-v1"} <= set(capabilities["features"])
                         scope = Path(tmp) / "scope.json"
@@ -105,9 +111,12 @@ def run(repo, tag, version, expected_checksums=None):
                         assert closed["closed"] and not closed["requests"], "scope-watch closure failed"
                     examples = sorted((skill / "examples").rglob("*.json"))
                     if dynamic:
-                        assert len(examples) == 19, "expected all current bundled layouts"
+                        assert len(examples) == (20 if file_data else 19), "expected all bundled layouts for this version"
                     for example in examples:
                         layout = json.loads(example.read_text())
+                        # File paths in caller templates must be substituted for the host.
+                        for source in layout.get("data_sources", {}).values():
+                            source["path"] = str(Path(tmp) / "unpublished-example-data.json")
                         if "root" not in layout:
                             layout = {"version": 1, "name": "Release graph validation",
                                       "root": {"kind": "dag", "id": "release-graph", "dag": layout}}

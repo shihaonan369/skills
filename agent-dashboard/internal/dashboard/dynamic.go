@@ -36,9 +36,10 @@ type Repeat struct {
 }
 
 type DAGNodeTemplate struct {
-	Label string   `json:"label,omitempty"`
-	Color string   `json:"color,omitempty"`
-	Meta  []string `json:"meta,omitempty"`
+	LabelValue *ValueBinding `json:"label_value,omitempty"`
+	Label      string        `json:"label,omitempty"`
+	Color      string        `json:"color,omitempty"`
+	Meta       []string      `json:"meta,omitempty"`
 }
 
 func (q Selection) validate() error {
@@ -334,7 +335,7 @@ func presentationLayout(s *State, now time.Time) *Layout {
 						n.Label = b.label()
 					}
 					if g.Node != nil {
-						n.Color, n.Meta = g.Node.Color, g.Node.Meta
+						n.Color, n.Meta, n.LabelValue = g.Node.Color, g.Node.Meta, g.Node.LabelValue
 						if g.Node.Label != "" {
 							n.Label = g.Node.Label
 						}
@@ -376,7 +377,8 @@ func presentationLayout(s *State, now time.Time) *Layout {
 		}
 		root = Panel{ID: dynamicPrefix + "error", Kind: "text", notice: "Dynamic layout diagnostic: " + message}
 	}
-	return &Layout{Version: s.Layout.Version, Name: s.Layout.Name, Root: root}
+	projectExternalLabels(&root, s, now)
+	return &Layout{Version: s.Layout.Version, Name: s.Layout.Name, Root: root, DataSources: s.Layout.DataSources}
 }
 
 func (v Viewer) canvasLayout() *Layout { return presentationLayout(v.State, time.Time{}) }

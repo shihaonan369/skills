@@ -25,6 +25,13 @@ Older 0.2.0 assets lack these features. Existing binaries are not upgraded. Read
 unverified native-harness acceptance boundary. Source bootstrap pins follow the
 [two-phase release lifecycle](#release-pin-lifecycle).
 
+**Source-only additions:** this checkout identifies as **0.4.0-dev** and adds
+`file-data-bindings-v1`: local JSON data sources with shared text/title/DAG-label
+bindings, numeric/progress/countdown formatting and an optional atomic
+`data-write` producer. Published 0.3.0 assets and bootstrap pins lack this
+capability. See [External file data](docs/DATA.md); existing installations remain
+unchanged and are not silently upgraded.
+
 ## First use
 
 Install/discover the skill in Claude Code and invoke `/agent-dashboard` with your
@@ -269,6 +276,18 @@ then foreground subagent batches, and only then main-agent checkpoints. Disclose
 scheduling gaps; unknown identities stay excluded. Read
 [the complete scope/worker contract](docs/DYNAMIC.md).
 
+## External variables and countdowns (source-only)
+
+A caller can bind text values, every leaf's title, and static/dynamic DAG labels
+to approved local JSON fields. One shared reader/resolver/formatter supplies all
+surfaces; data refreshes do not rewrite layouts or create telemetry. Optional
+`data-write` atomically publishes private snapshots with freshness metadata.
+Remaining seconds come from the script; only an explicit deadline opts into the
+local display clock. Missing, malformed and expired data remain unknown/stale.
+Read [the data contract](docs/DATA.md) and
+[countdown example](examples/data/README.md). No model or background classifier
+is involved in ordinary value updates.
+
 ## Synthetic demonstration
 
 ```sh
@@ -338,7 +357,7 @@ go run ./cmd/package
 ```
 
 Packaging cross-builds six pure-Go binaries (`CGO_ENABLED=0`), identifies them
-using `internal/buildinfo.Version` (currently `0.3.0`), writes per-platform zips and `target/SHA256SUMS`, and collects dependency license notices. Build output
+using `internal/buildinfo.Version` (currently `0.4.0-dev`), writes per-platform zips and `target/SHA256SUMS`, and collects dependency license notices. Build output
 (`bin/`, `target/`, toolchain) stays out of Git. Publish the six ZIPs and
 `target/release/SHA256SUMS` as GitHub Release assets; do not substitute automatic
 source archives. `target/SHA256SUMS` is the separate local-build manifest covering

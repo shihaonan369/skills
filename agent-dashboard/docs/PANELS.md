@@ -168,6 +168,17 @@ Its change echoes compare whole report/source-health observations, never report 
 or contact clocks; the footer labels those units `observations`, not events or
 throughput. See [REX.md](REX.md) for its separate privacy/lifecycle boundary.
 
+## External values (source 0.4.0-dev)
+
+Require `file-data-bindings-v1`. Root-level `data_sources` names approved local
+JSON files. Text panels accept `value`; every leaf accepts `title_value`; DAG
+node/edge labels and dynamic node templates accept `label_value`. All use one
+ValueBinding (`source`, JSON-pointer `path`, optional `format`/`prefix`/`suffix`).
+This is separate from typed entity `bind` and Rex filters. The caller publishes
+layout once and the external producer updates only data. See [DATA.md](DATA.md)
+for allowed formats, freshness/error semantics, private atomic publishing,
+bounds and pause behavior. External data never becomes native telemetry.
+
 ## Dynamic membership (0.3.0+)
 
 Read [DYNAMIC.md](DYNAMIC.md) for the shared `select`, universal `repeat`, scoped

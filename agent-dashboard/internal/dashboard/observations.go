@@ -339,6 +339,10 @@ func observationRows(p Panel, s *State, now time.Time) []reportRow {
 		return sourceRows(p, s, now)
 	}
 	if p.Kind == "text" {
+		if p.Value != nil {
+			rows := append([]reportRow{{text: "[External data · not native agent/task telemetry]"}}, textRows(p.Text)...)
+			return append(rows, reportRow{text: renderExternalValue(s, p.Value, now)})
+		}
 		return append([]reportRow{{text: "[Caller-authored text · not hook telemetry]"}}, textRows(p.Text)...)
 	}
 	return observations(s, now).rows(p)
