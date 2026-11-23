@@ -127,6 +127,20 @@ def run(repo, tag, version, expected_checksums=None):
                     frame = subprocess.check_output([str(executable), "tui", "--session", "DEMO-layout", "--plain"], env=env, text=True)
                     assert "DEMO" in frame and "SYNTHETIC" in frame
                     print(f"PASS native startup + synthetic plain frame: {target}")
+                    if file_data:
+                        data_path = Path(tmp) / "external-data.json"
+                        layout = {"version": 1, "data_sources": {"timer": {"type": "json-file", "path": str(data_path)}},
+                                  "root": {"id": "timer", "kind": "text", "value": {"source": "timer", "path": "/seconds", "format": "mm:ss"}}}
+                        subprocess.run([str(executable), "demo", "--json", json.dumps(layout)], env=env, check=True, stdout=subprocess.DEVNULL)
+                        before = subprocess.check_output([str(executable), "status", "--session", "DEMO-layout"], env=env)
+                        for seconds, expected in ((92, "01:32"), (31, "00:31")):
+                            subprocess.run([str(executable), "data-write", "--file", str(data_path), "--json", json.dumps({"seconds": seconds})], env=env, check=True)
+                            frame = subprocess.check_output([str(executable), "tui", "--session", "DEMO-layout", "--plain"], env=env, text=True)
+                            assert expected in frame and "External data" in frame
+                        after = subprocess.check_output([str(executable), "status", "--session", "DEMO-layout"], env=env)
+                        assert after == before, "external data rewrote layout/native telemetry"
+                        print("PASS public native binary: atomic data-write, shared binding refresh, unchanged session state")
+
             print(f"PASS anonymous download/hash/package: {name}")
     print(f"PASS release {tag}: all six public assets and archive-only checksums")
 
@@ -134,8 +148,8 @@ def run(repo, tag, version, expected_checksums=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default="shihaonan369/skills")
-    parser.add_argument("--tag", default="agent-dashboard-v0.3.0")
-    parser.add_argument("--version", default="0.3.0")
+    parser.add_argument("--tag", default="agent-dashboard-v0.4.0")
+    parser.add_argument("--version", default="0.4.0")
     parser.add_argument("--expected-checksums", help="reviewed local archive-only SHA256SUMS to match byte-for-byte")
     args = parser.parse_args()
     try:

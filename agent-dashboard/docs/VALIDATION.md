@@ -1,4 +1,4 @@
-# Validation matrix · source 0.4.0-dev
+# Validation matrix · version 0.4.0
 
 Latest checks recorded **2026-11-23 UTC** on **macOS / Darwin arm64 (Apple Silicon)**.
 Historical sections below retain their original scope.
@@ -6,6 +6,46 @@ Local build toolchain: **Go 1.27.4**, archive SHA-256 checked before extraction
 into ignored `.build-tools/go/`; no system-wide toolchain/runtime installed.
 Claude Code used for historical integration checks: **2.1.312**.
 Distribution builds are unsigned; release assets are not signed/notarized packages.
+
+## Version 0.4.0 release preparation (2026-11-23)
+
+The user authorized both a public 0.4.0 release and the local installed-binary
+upgrade after the read-only two-axis review. Feature commit:
+`09655e277bdf4b10d583712aeb773d8d46b262a0`. Review found **0 documented-standard
+violations, 3 non-blocking maintenance heuristics and 0 confirmed spec defects**.
+No unrelated refactoring was included. The source-only record below is historical.
+
+- Fresh release regression passed **121 Go top-level tests + 111 subtests**, with
+  race/coverage enabled, **2 conditional skips**, and `go vet`. Coverage: dashboard
+  **90.1%**, CLI **72.6%**, Rex observer **88.7%**, packager **25.3%**.
+- All **20 POSIX + 14 PowerShell** bootstrap tests passed; PowerShell ran on macOS,
+  not native Windows/5.1. The optional official Rex Lua contract passed using
+  synthetic API data and no telemetry submission.
+- **Five source macOS PTY runs** passed: external data live refresh/pause/stale/
+  corruption/recovery, dynamic scope-watch, dynamic polling, all-panel Rex, and
+  fanout effects/controls/resize. Native/reported telemetry remained truthful;
+  scope decisions and observation fixtures were explicitly synthetic.
+- Distribution preparation uses an isolated ignored workspace for all six
+  0.4.0 platform ZIPs. Archive verification covers **12 local + 6 archive-only**
+  hashes, one matching binary, current docs, **20 JSON examples** and absence of
+  development runtime/test/source/legacy files. The extracted native package is
+  checked with offline bootstrap, exact version/six capabilities, all layouts,
+  synthetic rendering and the external-data PTY before publication.
+- Publication is two-phase: authenticated draft asset verification, then public
+  anonymous download checks, and only then a separate source-main bootstrap
+  repin. The tag/ZIPs retain verified 0.3.0 acquisition pins; `.prebundled` forbids
+  older-version fallback. Published 0.1.0/0.2.0/0.3.0 assets stay immutable.
+- The authorized local upgrade replaces only the native executable after public
+  verification, retaining a rollback backup. It does not change Claude settings,
+  hooks, caller layouts, Rex configuration or running-session data. Existing
+  processes are not assumed to hot-reload a replaced executable.
+
+Only **macOS arm64** runtime is verified; the other five targets are cross-builds.
+Builds remain unsigned/not notarized. Real native background-subagent / Monitor /
+LLM classification and watch renewal remain **unverified end-to-end**; this
+numeric-data feature does not require them. Final publication, public download,
+source-repin and local-upgrade outcomes are recorded in the follow-up source-main
+entry rather than retroactively altering immutable release assets.
 
 ## External data bindings, source-only 0.4.0-dev (2026-11-23)
 

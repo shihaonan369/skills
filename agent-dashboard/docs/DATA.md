@@ -2,8 +2,8 @@
 
 ## Availability and ownership
 
-Source **0.4.0-dev** advertises `file-data-bindings-v1`. Published 0.3.0 binaries
-and bootstrap pins do not have this capability. Check the actual executable;
+Version **0.4.0+** advertises `file-data-bindings-v1`. Older 0.3.0 binaries
+do not have this capability. Check the actual executable;
 preserve existing installations and report a missing capability instead of
 silently replacing a binary or installing a build toolchain.
 

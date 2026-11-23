@@ -25,12 +25,11 @@ Older 0.2.0 assets lack these features. Existing binaries are not upgraded. Read
 unverified native-harness acceptance boundary. Source bootstrap pins follow the
 [two-phase release lifecycle](#release-pin-lifecycle).
 
-**Source-only additions:** this checkout identifies as **0.4.0-dev** and adds
-`file-data-bindings-v1`: local JSON data sources with shared text/title/DAG-label
-bindings, numeric/progress/countdown formatting and an optional atomic
-`data-write` producer. Published 0.3.0 assets and bootstrap pins lack this
-capability. See [External file data](docs/DATA.md); existing installations remain
-unchanged and are not silently upgraded.
+**Version 0.4.0** adds `file-data-bindings-v1`: local JSON data sources with
+shared text/title/DAG-label bindings, numeric/progress/countdown formatting and
+an optional atomic `data-write` producer. Older 0.3.0 assets lack this capability.
+See [External file data](docs/DATA.md). Existing executables are reused, not
+silently upgraded; source acquisition pins follow the two-phase lifecycle below.
 
 ## First use
 
@@ -89,21 +88,21 @@ Packages are available for **macOS, Windows, and Linux**, each in **x64 and ARM6
 Each ZIP contains this skill directory, one matching executable, docs, examples,
 and third-party notices. No end-user compilation or extra runtime is required.
 
-Choose the uploaded `agent-dashboard-0.3.0-<os>-<arch>.zip` asset, **not** the
+Choose the uploaded `agent-dashboard-0.4.0-<os>-<arch>.zip` asset, **not** the
 automatic “Source code” archives. Source checkouts omit `bin/` and `target/`.
 Extract to a permanent directory before installing hooks; keep existing unrelated
 skills intact. Platform verification and unsigned-build caveats are covered under
 [Safety, distribution and limitations](#safety-distribution-and-limitations).
 
-### Version 0.3.0
+### Version 0.4.0
 
 | Operating system | x64 / AMD64 | ARM64 |
 | --- | --- | --- |
-| macOS | [Intel Mac ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/agent-dashboard-0.3.0-darwin-amd64.zip) | [Apple Silicon ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/agent-dashboard-0.3.0-darwin-arm64.zip) |
-| Windows | [Windows x64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/agent-dashboard-0.3.0-windows-amd64.zip) | [Windows ARM64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/agent-dashboard-0.3.0-windows-arm64.zip) |
-| Linux | [Linux x64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/agent-dashboard-0.3.0-linux-amd64.zip) | [Linux ARM64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/agent-dashboard-0.3.0-linux-arm64.zip) |
+| macOS | [Intel Mac ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.4.0/agent-dashboard-0.4.0-darwin-amd64.zip) | [Apple Silicon ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.4.0/agent-dashboard-0.4.0-darwin-arm64.zip) |
+| Windows | [Windows x64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.4.0/agent-dashboard-0.4.0-windows-amd64.zip) | [Windows ARM64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.4.0/agent-dashboard-0.4.0-windows-arm64.zip) |
+| Linux | [Linux x64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.4.0/agent-dashboard-0.4.0-linux-amd64.zip) | [Linux ARM64 ZIP](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.4.0/agent-dashboard-0.4.0-linux-arm64.zip) |
 
-[SHA-256 checksums](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0/SHA256SUMS)
+[SHA-256 checksums](https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.4.0/SHA256SUMS)
 cover the six downloadable ZIPs. Before extracting, compare the downloaded
 archive's digest with `SHA256SUMS`:
 
@@ -276,7 +275,7 @@ then foreground subagent batches, and only then main-agent checkpoints. Disclose
 scheduling gaps; unknown identities stay excluded. Read
 [the complete scope/worker contract](docs/DYNAMIC.md).
 
-## External variables and countdowns (source-only)
+## External variables and countdowns (0.4.0+)
 
 A caller can bind text values, every leaf's title, and static/dynamic DAG labels
 to approved local JSON fields. One shared reader/resolver/formatter supplies all
@@ -357,7 +356,7 @@ go run ./cmd/package
 ```
 
 Packaging cross-builds six pure-Go binaries (`CGO_ENABLED=0`), identifies them
-using `internal/buildinfo.Version` (currently `0.4.0-dev`), writes per-platform zips and `target/SHA256SUMS`, and collects dependency license notices. Build output
+using `internal/buildinfo.Version` (currently `0.4.0`), writes per-platform zips and `target/SHA256SUMS`, and collects dependency license notices. Build output
 (`bin/`, `target/`, toolchain) stays out of Git. Publish the six ZIPs and
 `target/release/SHA256SUMS` as GitHub Release assets; do not substitute automatic
 source archives. `target/SHA256SUMS` is the separate local-build manifest covering

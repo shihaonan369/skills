@@ -97,8 +97,7 @@ activity. The dashboard never launches Claude/Pi or calls a model API.
 
 For external variables, countdowns, numeric/percentage displays or script-fed
 titles/DAG labels, read **`docs/DATA.md` in full**. Require
-`file-data-bindings-v1` (source 0.4.0-dev, absent from published 0.3.0 and its
-bootstrap pins). Declare caller-approved `data_sources` and field bindings once;
+`file-data-bindings-v1` (0.4.0+; older 0.3.0 binaries lack it). Declare caller-approved `data_sources` and field bindings once;
 let the existing script publish complete JSON snapshots, optionally through
 `<D> data-write`. Verify initial data, a subsequent update, and stale/error
 behavior. Keep raw values out of native agent/task telemetry. Do not delegate

@@ -125,7 +125,7 @@ keys, while still never substituting reports into native collections implicitly.
 These additions require `dynamic-layout-v1` / `agent-scope-v1`, not merely the
 0.2.0 binding capability. New source bindings remain a distinct namespace.
 
-## External data is a separate presentation plane (source 0.4.0-dev)
+## External data is a separate presentation plane (0.4.0+)
 
 `file-data-bindings-v1` adds value bindings, not another observation entity kind.
 Approved local JSON values may decorate text, leaf titles and DAG labels through

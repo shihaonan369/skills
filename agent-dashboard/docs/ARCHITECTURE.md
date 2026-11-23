@@ -213,7 +213,7 @@ Moving the binary requires uninstalling at the old location before reinstalling.
 
 ## External file data and shared presentation values
 
-Source 0.4.0-dev adds `external_data.go` behind `file-data-bindings-v1`.
+Version 0.4.0 adds `external_data.go` behind `file-data-bindings-v1`.
 `PreparePresentation` reads referenced approved local JSON paths once each per
 observation refresh into private transient state. Errors are per-source results,
 not global canvas failures. One pure pointer/freshness/format resolver serves

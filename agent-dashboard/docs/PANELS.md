@@ -168,7 +168,7 @@ Its change echoes compare whole report/source-health observations, never report 
 or contact clocks; the footer labels those units `observations`, not events or
 throughput. See [REX.md](REX.md) for its separate privacy/lifecycle boundary.
 
-## External values (source 0.4.0-dev)
+## External values (0.4.0+)
 
 Require `file-data-bindings-v1`. Root-level `data_sources` names approved local
 JSON files. Text panels accept `value`; every leaf accepts `title_value`; DAG

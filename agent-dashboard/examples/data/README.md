@@ -1,6 +1,6 @@
 # Caller-owned external countdown
 
-Requires source 0.4.0-dev and `file-data-bindings-v1`; published 0.3.0 assets
+Requires version 0.4.0+ and `file-data-bindings-v1`; published 0.3.0 assets
 do not support this example. Follow [DATA.md](../../docs/DATA.md) first.
 This is an optional caller illustration, not a workflow or a fabricated native
 agent/task. No model or subagent is involved in numeric updates.
