@@ -12,7 +12,7 @@ import warnings
 import zipfile
 
 SKILL = Path(__file__).resolve().parents[1]
-RELEASE = "https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.3.0"
+RELEASE = "https://github.com/shihaonan369/skills/releases/download/agent-dashboard-v0.4.0"
 PAYLOAD = b"#!/bin/sh\necho 'synthetic executable; bootstrap must not run this'\nexit 99\n"
 
 
@@ -75,7 +75,7 @@ shutil.copyfile(Path(os.environ["BOOTSTRAP_ASSETS"]) / url.rsplit("/", 1)[1], ar
 
     def archive(self, target="darwin-arm64", members=None):
         binary = "agent-dashboard.exe" if target.startswith("windows-") else "agent-dashboard"
-        name = f"agent-dashboard-0.3.0-{target}.zip"
+        name = f"agent-dashboard-0.4.0-{target}.zip"
         archive = self.assets / name
         member = f"agent-dashboard/bin/{target}/{binary}"
         with warnings.catch_warnings():

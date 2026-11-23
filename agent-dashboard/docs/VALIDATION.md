@@ -7,6 +7,51 @@ into ignored `.build-tools/go/`; no system-wide toolchain/runtime installed.
 Claude Code used for historical integration checks: **2.1.312**.
 Distribution builds are unsigned; release assets are not signed/notarized packages.
 
+## Published 0.4.0, source-main pins and authorized local upgrade (2026-11-23)
+
+Published [Agent Dashboard v0.4.0](https://github.com/shihaonan369/skills/releases/tag/agent-dashboard-v0.4.0)
+at **2026-11-23T10:10:39Z**, verified as Latest. Release-code commit:
+`a1a9f6598392432d5d5015da0ed7d1bd41872881`. Annotated tag:
+`agent-dashboard-v0.4.0`, tag object `0039ab027198376f3e921149a1ddba9b491981e9`.
+All six binaries identify that clean release-code commit in their build metadata.
+
+- Exactly **six platform ZIPs + archive-only SHA256SUMS** were uploaded to a
+  draft. All seven asset sizes/server digests and authenticated draft downloads
+  matched the reviewed local files before publication.
+- Anonymous public downloads of all six assets and manifest passed
+  `tests/release_smoke.py --tag agent-dashboard-v0.4.0 --version 0.4.0
+  --expected-checksums <reviewed-local-manifest>`. Checks included package/privacy
+  rules, six capabilities, scope-watch closure, **20** bundled layouts, synthetic
+  rendering and native atomic data publication/live binding refresh without
+  rewriting the synthetic session state.
+- Only after those public checks were source-main helper versions and all six
+  trusted archive hashes repinned to **0.4.0**. The pin-specific Go assertion and
+  synthetic bootstrap fixtures were updated to the new exact version; an initial
+  post-repin failure caught the old hard-coded 0.3.0 pin assertion before it was
+  updated. Full post-repin regression then passed **121 top-level tests + 111
+  subtests**, race/coverage, **2 conditional skips**, `go vet`, and all **34**
+  bootstrap tests. Release tags/ZIPs retain preceding pins and were not rebuilt.
+- A fresh source-like directory with spaces used the actual repinned helper to
+  download the public native binary, verified its exact reviewed hash/version/
+  capabilities, left instructions/pins untouched, removed locks/staging files,
+  and reused the binary offline without HTTPS/hash/ZIP utilities. The disposable
+  installation was removed after the upgrade.
+- The separately authorized local upgrade backed up the existing **0.2.0-dev**
+  executable under ignored `target/local-install-backups/`, then atomically
+  replaced only the native executable with the publicly downloaded **0.4.0**
+  binary. New native executable SHA-256: `ff73d3846365b38c5b640badcae75ceb947921c82978a9c3dab5d896c34f91bc`.
+  The skill symlink and Claude settings fingerprints are unchanged; no hooks,
+  private layouts, Rex configuration or real-session telemetry were rewritten.
+  The installed binary passed a further external-data PTY and bootstrap readiness
+  check. Already-running processes are not assumed to hot-reload.
+- Original **0.1.0 / 0.2.0 / 0.3.0 release and asset IDs, names, sizes and digests**
+  were compared before/after publication and are unchanged.
+
+Only macOS arm64 runtime was verified; foreign targets remain cross-build-only,
+PowerShell 5.1/native Windows remain unverified, and builds remain unsigned/not
+notarized. Real native background-subagent / Monitor / LLM acceptance is still
+unverified. Synthetic checks are not evidence of that separate integration.
+
 ## Version 0.4.0 release preparation (2026-11-23)
 
 The user authorized both a public 0.4.0 release and the local installed-binary
